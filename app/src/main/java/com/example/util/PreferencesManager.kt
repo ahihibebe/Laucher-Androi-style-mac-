@@ -10,9 +10,12 @@ class PreferencesManager(context: Context) {
     companion object {
         private const val KEY_SHOW_CLOCK = "show_clock"
         private const val KEY_SHOW_LUNAR = "show_lunar"
+        private const val KEY_SHOW_MARKET_PRICES = "show_market_prices"
         private const val KEY_24_HOUR = "is_24_hour"
         private const val KEY_SHOW_CAN_CHI = "show_can_chi"
         private const val KEY_WALLPAPER = "wallpaper_id"
+        private const val KEY_CUSTOM_WALLPAPER_URI = "custom_wallpaper_uri"
+        private const val KEY_HIDDEN_PACKAGES = "hidden_packages"
         private const val KEY_DOCK_APP_0 = "dock_app_0"
         private const val KEY_DOCK_APP_1 = "dock_app_1"
         private const val KEY_DOCK_APP_2 = "dock_app_2"
@@ -24,10 +27,12 @@ class PreferencesManager(context: Context) {
         set(value) = prefs.edit().putBoolean(KEY_SHOW_CLOCK, value).apply()
 
     var showLunar: Boolean
-        get() = prefs.getBoolean(KEY_SHOW_LIR_COMPAT, prefs.getBoolean(KEY_SHOW_LUNAR, true))
+        get() = prefs.getBoolean(KEY_SHOW_LUNAR, true)
         set(value) = prefs.edit().putBoolean(KEY_SHOW_LUNAR, value).apply()
 
-    private val KEY_SHOW_LIR_COMPAT = "show_lunar"
+    var showMarketPrices: Boolean
+        get() = prefs.getBoolean(KEY_SHOW_MARKET_PRICES, true)
+        set(value) = prefs.edit().putBoolean(KEY_SHOW_MARKET_PRICES, value).apply()
 
     var is24HourFormat: Boolean
         get() = prefs.getBoolean(KEY_24_HOUR, true)
@@ -40,6 +45,30 @@ class PreferencesManager(context: Context) {
     var wallpaperId: String
         get() = prefs.getString(KEY_WALLPAPER, "sequoia") ?: "sequoia"
         set(value) = prefs.edit().putString(KEY_WALLPAPER, value).apply()
+
+    var customWallpaperUri: String?
+        get() = prefs.getString(KEY_CUSTOM_WALLPAPER_URI, null)
+        set(value) = prefs.edit().putString(KEY_CUSTOM_WALLPAPER_URI, value).apply()
+
+    var hiddenPackages: Set<String>
+        get() = prefs.getStringSet(KEY_HIDDEN_PACKAGES, emptySet()) ?: emptySet()
+        set(value) = prefs.edit().putStringSet(KEY_HIDDEN_PACKAGES, value).apply()
+
+    fun hidePackage(pkg: String) {
+        val current = hiddenPackages.toMutableSet()
+        current.add(pkg)
+        hiddenPackages = current
+    }
+
+    fun unhidePackage(pkg: String) {
+        val current = hiddenPackages.toMutableSet()
+        current.remove(pkg)
+        hiddenPackages = current
+    }
+
+    fun unhideAll() {
+        hiddenPackages = emptySet()
+    }
 
     fun getDockPackage(slot: Int): String {
         val defaultPkg = when (slot) {

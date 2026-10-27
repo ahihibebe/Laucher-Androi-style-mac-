@@ -1,6 +1,6 @@
 {
-  "name": "macOS Launcher",
-  "description": "Trình khởi chạy Android phong cách macOS với thanh Dock 4 ứng dụng, Launchpad vuốt sang phải và cài đặt đồng hồ lịch âm.",
+  "name": "macOs",
+  "description": "Launcher Giao diện macOs bởi Dev Trường Thanh. Hỗ trợ Dock 4 ứng dụng, xem giá cà phê, giá vàng nhẫn, lịch âm và tùy biến.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

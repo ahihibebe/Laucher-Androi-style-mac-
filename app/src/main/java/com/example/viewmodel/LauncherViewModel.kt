@@ -6,6 +6,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.provider.MediaStore
 import android.provider.Settings
 import androidx.compose.material.icons.Icons
@@ -21,9 +24,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.model.AppInfo
 import com.example.model.LunarDate
+import com.example.model.MarketPriceReport
 import com.example.model.WallpaperPresets
 import com.example.model.WallpaperTheme
 import com.example.util.LunarCalendarHelper
+import com.example.util.MarketPriceRepository
 import com.example.util.PreferencesManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -39,6 +44,7 @@ import java.util.Calendar
 
 enum class SettingsCategory(val title: String) {
     CLOCK_AND_LUNAR("Đồng hồ & Lịch âm"),
+    MARKET_PRICES("Giá Cà phê & Vàng"),
     DOCK("Thanh Dock (4 ứng dụng)"),
     WALLPAPER("Hình nền"),
     GENERAL("Cài đặt chung"),
@@ -48,6 +54,7 @@ enum class SettingsCategory(val title: String) {
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefs = PreferencesManager(application)
+    private val marketRepo = MarketPriceRepository()
 
     private val _installedApps = MutableStateFlow<List<AppInfo>>(emptyList())
     val installedApps: StateFlow<List<AppInfo>> = _installedApps.asStateFlow()
@@ -55,11 +62,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    val filteredApps: StateFlow<List<AppInfo>> = combine(_installedApps, _searchQuery) { apps, query ->
+    private val _hiddenPackages = MutableStateFlow(prefs.hiddenPackages)
+    val hiddenPackages: StateFlow<Set<String>> = _hiddenPackages.asStateFlow()
+
+    val filteredApps: StateFlow<List<AppInfo>> = combine(_installedApps, _searchQuery, _hiddenPackages) { apps, query, hidden ->
+        val visibleApps = apps.filter { !hidden.contains(it.packageName) }
         if (query.isBlank()) {
-            apps
+            visibleApps
         } else {
-            apps.filter { it.label.contains(query, ignoreCase = true) || it.packageName.contains(query, ignoreCase = true) }
+            visibleApps.filter {
+                it.label.contains(query, ignoreCase = true) || it.packageName.contains(query, ignoreCase = true)
+            }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -70,12 +83,19 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _currentLunarDate = MutableStateFlow(LunarCalendarHelper.getTodayLunarDate())
     val currentLunarDate: StateFlow<LunarDate> = _currentLunarDate.asStateFlow()
 
+    // Market Prices (Giá Cà phê & Vàng nhẫn)
+    private val _marketPrices = MutableStateFlow<MarketPriceReport?>(null)
+    val marketPrices: StateFlow<MarketPriceReport?> = _marketPrices.asStateFlow()
+
     // Preferences states
     private val _showClock = MutableStateFlow(prefs.showClock)
     val showClock: StateFlow<Boolean> = _showClock.asStateFlow()
 
     private val _showLunar = MutableStateFlow(prefs.showLunar)
     val showLunar: StateFlow<Boolean> = _showLunar.asStateFlow()
+
+    private val _showMarketPrices = MutableStateFlow(prefs.showMarketPrices)
+    val showMarketPrices: StateFlow<Boolean> = _showMarketPrices.asStateFlow()
 
     private val _is24Hour = MutableStateFlow(prefs.is24HourFormat)
     val is24Hour: StateFlow<Boolean> = _is24Hour.asStateFlow()
@@ -86,9 +106,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _currentWallpaper = MutableStateFlow(WallpaperPresets.getById(prefs.wallpaperId))
     val currentWallpaper: StateFlow<WallpaperTheme> = _currentWallpaper.asStateFlow()
 
+    private val _customWallpaperUri = MutableStateFlow(prefs.customWallpaperUri)
+    val customWallpaperUri: StateFlow<String?> = _customWallpaperUri.asStateFlow()
+
     // 4 Dock apps
     private val _dockApps = MutableStateFlow<List<AppInfo>>(emptyList())
     val dockApps: StateFlow<List<AppInfo>> = _dockApps.asStateFlow()
+
+    // Jiggle Mode (iOS / macOS wiggle edit mode)
+    private val _isJiggleMode = MutableStateFlow(false)
+    val isJiggleMode: StateFlow<Boolean> = _isJiggleMode.asStateFlow()
 
     // UI overlays
     private val _isSettingsOpen = MutableStateFlow(false)
@@ -100,6 +127,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _isAboutOpen = MutableStateFlow(false)
     val isAboutOpen: StateFlow<Boolean> = _isAboutOpen.asStateFlow()
 
+    private val _isDesktopContextMenuOpen = MutableStateFlow(false)
+    val isDesktopContextMenuOpen: StateFlow<Boolean> = _isDesktopContextMenuOpen.asStateFlow()
+
     private val _selectedSettingsCategory = MutableStateFlow(SettingsCategory.CLOCK_AND_LUNAR)
     val selectedSettingsCategory: StateFlow<SettingsCategory> = _selectedSettingsCategory.asStateFlow()
 
@@ -109,15 +139,26 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     init {
         loadInstalledApps()
         startClockTicker()
+        fetchMarketPrices()
     }
 
     private fun startClockTicker() {
         viewModelScope.launch(Dispatchers.Default) {
             while (true) {
                 _currentTime.value = Calendar.getInstance()
-                // Update lunar date once a minute or on day change
                 _currentLunarDate.value = LunarCalendarHelper.getTodayLunarDate()
                 delay(1000)
+            }
+        }
+    }
+
+    fun fetchMarketPrices() {
+        viewModelScope.launch {
+            try {
+                val data = marketRepo.getLatestMarketPrices()
+                _marketPrices.value = data
+            } catch (e: Exception) {
+                // Ignore
             }
         }
     }
@@ -131,11 +172,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
             val resolveInfos = pm.queryIntentActivities(mainIntent, 0)
             val appList = mutableListOf<AppInfo>()
+            val seenPackages = mutableSetOf<String>()
 
             for (ri in resolveInfos) {
                 val pkgName = ri.activityInfo.packageName
-                // Skip our own launcher from the drawer or keep it
                 if (pkgName == getApplication<Application>().packageName) continue
+                // Prevent duplicate packages from throwing unique key exceptions in LazyGrid
+                if (seenPackages.contains(pkgName)) continue
+                seenPackages.add(pkgName)
 
                 val label = ri.loadLabel(pm).toString()
                 val iconDrawable = ri.loadIcon(pm)
@@ -155,12 +199,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 )
             }
 
-            // Fallback system apps if running on fresh device or simulator
             if (appList.isEmpty()) {
                 appList.addAll(createFallbackApps())
             }
 
-            // Sort alphabetically
             appList.sortBy { it.label.lowercase() }
 
             withContext(Dispatchers.Main) {
@@ -190,7 +232,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             if (matchedApp != null) {
                 dockList.add(matchedApp)
             } else {
-                // Default fallback slot apps
                 val fallback = when (slot) {
                     0 -> allApps.find { it.label.contains("thoại", true) || it.label.contains("phone", true) }
                         ?: AppInfo("action:phone", "Điện thoại", null, Icons.Default.Phone, true)
@@ -208,49 +249,79 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _dockApps.value = dockList
     }
 
+    fun triggerVibration() {
+        try {
+            val app = getApplication<Application>()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibratorManager = app.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                vibratorManager?.defaultVibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                val vibrator = app.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                vibrator?.vibrate(50)
+            }
+        } catch (e: Exception) {
+            // Ignore
+        }
+    }
+
+    fun setJiggleMode(active: Boolean) {
+        if (active) triggerVibration()
+        _isJiggleMode.value = active
+    }
+
+    fun hideApp(app: AppInfo) {
+        prefs.hidePackage(app.packageName)
+        _hiddenPackages.value = prefs.hiddenPackages
+    }
+
+    fun unhideAllApps() {
+        prefs.unhideAll()
+        _hiddenPackages.value = emptySet()
+    }
+
+    fun uninstallApp(context: Context, app: AppInfo) {
+        try {
+            val intent = Intent(Intent.ACTION_DELETE).apply {
+                data = Uri.parse("package:${app.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            // Fallback to app details
+            try {
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:${app.packageName}")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+            } catch (e2: Exception) {
+                // Ignore
+            }
+        }
+    }
+
     fun launchApp(context: Context, app: AppInfo) {
+        if (_isJiggleMode.value) {
+            // Tapping during jiggle mode can exit jiggle mode
+            _isJiggleMode.value = false
+            return
+        }
         try {
             when (app.packageName) {
-                "action:phone" -> {
-                    val intent = Intent(Intent.ACTION_DIAL)
-                    context.startActivity(intent)
-                }
-                "action:messages" -> {
-                    val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = Uri.parse("smsto:")
-                    }
-                    context.startActivity(intent)
-                }
-                "action:browser" -> {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://google.com"))
-                    context.startActivity(intent)
-                }
-                "action:camera" -> {
-                    val intent = Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
-                    context.startActivity(intent)
-                }
-                "action:photos" -> {
-                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                        type = "image/*"
-                    }
-                    context.startActivity(intent)
-                }
-                "action:settings" -> {
-                    openSettingsDialog()
-                }
-                "action:files" -> {
-                    val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-                        type = "*/*"
-                    }
-                    context.startActivity(intent)
-                }
+                "action:phone" -> context.startActivity(Intent(Intent.ACTION_DIAL))
+                "action:messages" -> context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:")))
+                "action:browser" -> context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://google.com")))
+                "action:camera" -> context.startActivity(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA))
+                "action:photos" -> context.startActivity(Intent(Intent.ACTION_VIEW).apply { type = "image/*" })
+                "action:settings" -> openSettingsDialog()
+                "action:files" -> context.startActivity(Intent(Intent.ACTION_GET_CONTENT).apply { type = "*/*" })
                 else -> {
                     val launchIntent = context.packageManager.getLaunchIntentForPackage(app.packageName)
                     if (launchIntent != null) {
                         launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         context.startActivity(launchIntent)
                     } else {
-                        // Try viewing
                         val intent = Intent(Intent.ACTION_MAIN).apply {
                             setPackage(app.packageName)
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -266,13 +337,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun openDefaultLauncherSettings(context: Context) {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                val intent = Intent(Settings.ACTION_HOME_SETTINGS)
-                context.startActivity(intent)
-            } else {
-                val intent = Intent(Settings.ACTION_SETTINGS)
-                context.startActivity(intent)
-            }
+            val intent = Intent(Settings.ACTION_HOME_SETTINGS)
+            context.startActivity(intent)
         } catch (e: Exception) {
             try {
                 val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
@@ -297,6 +363,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         prefs.showLunar = show
     }
 
+    fun toggleMarketPrices(show: Boolean) {
+        _showMarketPrices.value = show
+        prefs.showMarketPrices = show
+    }
+
     fun toggle24Hour(is24: Boolean) {
         _is24Hour.value = is24
         prefs.is24HourFormat = is24
@@ -308,8 +379,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun setWallpaper(wallpaper: WallpaperTheme) {
+        _customWallpaperUri.value = null
+        prefs.customWallpaperUri = null
         _currentWallpaper.value = wallpaper
         prefs.wallpaperId = wallpaper.id
+    }
+
+    fun setCustomWallpaperUri(uriString: String?) {
+        _customWallpaperUri.value = uriString
+        prefs.customWallpaperUri = uriString
     }
 
     fun openDockSlotPicker(slot: Int) {
@@ -357,5 +435,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun closeAboutDialog() {
         _isAboutOpen.value = false
+    }
+
+    fun openDesktopContextMenu() {
+        triggerVibration()
+        _isDesktopContextMenuOpen.value = true
+    }
+
+    fun closeDesktopContextMenu() {
+        _isDesktopContextMenuOpen.value = false
     }
 }
