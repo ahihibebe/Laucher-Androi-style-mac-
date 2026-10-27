@@ -364,7 +364,7 @@ fun LaunchpadScreen(
                                     if (currentSlotCenter != null) {
                                         val floatingCenter = currentSlotCenter + draggingOffset
 
-                                        var closestIndex = curIdx
+                                        var closestIndex: Int = curIdx
                                         var minDistanceSq = Float.MAX_VALUE
 
                                         itemCenters.forEach { (targetIdx, targetCenter) ->
