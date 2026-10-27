@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">macOS Launcher</string>
+    <string name="system_settings">Cài đặt hệ thống</string>
+    <string name="launchpad">Launchpad</string>
+    <string name="finder">Finder</string>
+    <string name="search_apps_placeholder">Tìm kiếm ứng dụng...</string>
+    <string name="clock_and_lunar">Đồng hồ &amp; Lịch âm</string>
+    <string name="toggle_clock">Hiển thị đồng hồ</string>
+    <string name="toggle_lunar">Hiển thị lịch âm</string>
+    <string name="lunar_canchi">Hiển thị Can Chi</string>
+    <string name="dock_settings">Thanh Dock (4 ứng dụng)</string>
+    <string name="wallpapers">Hình nền Desktop</string>
+    <string name="about_mac">Giới thiệu Launcher</string>
+    <string name="set_default_home">Đặt làm Launcher mặc định</string>
+    <string name="control_center">Trung tâm điều khiển</string>
+</resources>

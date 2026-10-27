@@ -1,0 +1,6 @@
+{
+  "name": "macOS Launcher",
+  "description": "Trình khởi chạy Android phong cách macOS với thanh Dock 4 ứng dụng, Launchpad vuốt sang phải và cài đặt đồng hồ lịch âm.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
