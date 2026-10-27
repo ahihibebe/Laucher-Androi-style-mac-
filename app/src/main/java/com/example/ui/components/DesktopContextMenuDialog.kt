@@ -119,8 +119,8 @@ fun DesktopContextMenuDialog(
                 ContextMenuActionRow(
                     icon = Icons.Default.TrendingUp,
                     iconTint = Color(0xFF34D399),
-                    title = "Giá Cà phê & Vàng nhẫn",
-                    subtitle = "Cập nhật trực tiếp từ giacaphe.com",
+                    title = "Giá Cà phê, Vàng & Xăng dầu",
+                    subtitle = "Giá tại: Lâm Đồng, Vàng & Xăng Vùng 1, 2, 3",
                     onClick = {
                         onDismiss()
                         viewModel.openSettingsDialog(SettingsCategory.MARKET_PRICES)

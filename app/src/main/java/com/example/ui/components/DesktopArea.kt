@@ -22,11 +22,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.LocalGasStation
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
@@ -38,7 +42,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -150,12 +156,15 @@ fun DesktopArea(
                 .padding(top = statusBarTop + 14.dp, start = 14.dp, end = 14.dp, bottom = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Symmetrical Cards: Left = Lịch Vạn Niên & Giờ; Right = Giá Cà Phê & Giá Vàng
+            val pagerScope = rememberCoroutineScope()
+            val marketPagerState = rememberPagerState(pageCount = { 2 })
+
+            // Symmetrical Cards: Left = Lịch Vạn Niên & Giờ; Right = Giá Cà Phê, Giá Vàng & Xăng Dầu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Widget 1: Lịch vạn niên & Giờ (Left symmetrical card)
+                // Widget 1: Lịch vạn niên & Giờ (Left symmetrical card) - Bấm vào xem đầy đủ lịch
                 if (showClock || showLunar) {
                     Card(
                         shape = RoundedCornerShape(20.dp),
@@ -164,7 +173,7 @@ fun DesktopArea(
                         ),
                         modifier = Modifier
                             .weight(1f)
-                            .height(184.dp)
+                            .height(196.dp)
                             .border(
                                 1.dp,
                                 Brush.verticalGradient(
@@ -172,101 +181,8 @@ fun DesktopArea(
                                 ),
                                 RoundedCornerShape(20.dp)
                             )
-                            .clickable { viewModel.openSettingsDialog(SettingsCategory.CLOCK_AND_LUNAR) }
+                            .clickable { viewModel.openFullCalendarDialog() }
                             .testTag("clock_lunar_desktop_widget")
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(12.dp),
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            // Header
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(5.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFFFB74D).copy(alpha = 0.25f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CalendarMonth,
-                                        contentDescription = null,
-                                        tint = Color(0xFFFFB74D),
-                                        modifier = Modifier.size(13.dp)
-                                    )
-                                }
-                                Text(
-                                    text = "LỊCH VẠN NIÊN",
-                                    color = Color.White.copy(alpha = 0.75f),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-                            // Center: Clock
-                            if (showClock) {
-                                Column {
-                                    Text(
-                                        text = formattedTime,
-                                        color = Color.White,
-                                        fontSize = 28.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = formattedDate,
-                                        color = Color.White.copy(alpha = 0.85f),
-                                        fontSize = 11.5.sp
-                                    )
-                                }
-                            }
-
-                            // Bottom: Lunar Date
-                            if (showLunar) {
-                                Column {
-                                    Text(
-                                        text = "Âm: ${lunarDate.day}/${lunarDate.month}${if (lunarDate.isLeap) " (Nhuận)" else ""}",
-                                        color = Color(0xFFFDE047),
-                                        fontSize = 12.5.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    if (showCanChi) {
-                                        Text(
-                                            text = "Năm ${lunarDate.canChiYear}",
-                                            color = Color.White.copy(alpha = 0.75f),
-                                            fontSize = 10.5.sp
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Widget 2: Giá Cà Phê & Giá Vàng (Right symmetrical card)
-                if (showMarketPrices) {
-                    Card(
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color.Black.copy(alpha = 0.38f)
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(184.dp)
-                            .border(
-                                1.dp,
-                                Brush.verticalGradient(
-                                    listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.08f))
-                                ),
-                                RoundedCornerShape(20.dp)
-                            )
-                            // Click opens live online coffee prices popup dialog from giacaphe.com
-                            .clickable { viewModel.openCoffeeOnlineDialog() }
-                            .testTag("market_prices_desktop_widget")
                     ) {
                         Column(
                             modifier = Modifier
@@ -288,20 +204,145 @@ fun DesktopArea(
                                         modifier = Modifier
                                             .size(20.dp)
                                             .clip(CircleShape)
-                                            .background(Color(0xFF34D399).copy(alpha = 0.25f)),
+                                            .background(Color(0xFFFFB74D).copy(alpha = 0.25f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.TrendingUp,
+                                            imageVector = Icons.Default.CalendarMonth,
                                             contentDescription = null,
-                                            tint = Color(0xFF34D399),
+                                            tint = Color(0xFFFFB74D),
                                             modifier = Modifier.size(13.dp)
                                         )
                                     }
                                     Text(
-                                        text = "GIÁ THỊ TRƯỜNG",
-                                        color = Color.White.copy(alpha = 0.75f),
+                                        text = "LỊCH VẠN NIÊN",
+                                        color = Color.White.copy(alpha = 0.85f),
                                         fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color.White.copy(alpha = 0.12f),
+                                    modifier = Modifier.clickable { viewModel.openFullCalendarDialog() }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Text("Xem đầy đủ", color = Color(0xFFFBBF24), fontSize = 8.5.sp, fontWeight = FontWeight.SemiBold)
+                                        Icon(Icons.Default.OpenInNew, contentDescription = null, tint = Color(0xFFFBBF24), modifier = Modifier.size(9.dp))
+                                    }
+                                }
+                            }
+
+                            // Center: Clock
+                            if (showClock) {
+                                Column {
+                                    Text(
+                                        text = formattedTime,
+                                        color = Color.White,
+                                        fontSize = 27.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = formattedDate,
+                                        color = Color.White.copy(alpha = 0.85f),
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+
+                            // Bottom: Lunar Date
+                            if (showLunar) {
+                                Column {
+                                    Text(
+                                        text = "Âm: ${lunarDate.day}/${lunarDate.month}${if (lunarDate.isLeap) " (Nhuận)" else ""}",
+                                        color = Color(0xFFFDE047),
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    if (showCanChi) {
+                                        Text(
+                                            text = "Năm ${lunarDate.canChiYear}",
+                                            color = Color.White.copy(alpha = 0.75f),
+                                            fontSize = 10.sp
+                                        )
+                                    }
+                                    Text(
+                                        text = "Chạm để xem chi tiết lịch",
+                                        color = Color.White.copy(alpha = 0.45f),
+                                        fontSize = 8.5.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Widget 2: Giá Thị Trường (Cà Phê, Giá Vàng & Xăng Dầu) với trang cuộn sang phải
+                if (showMarketPrices) {
+                    Card(
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color.Black.copy(alpha = 0.38f)
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(196.dp)
+                            .border(
+                                1.dp,
+                                Brush.verticalGradient(
+                                    listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.08f))
+                                ),
+                                RoundedCornerShape(20.dp)
+                            )
+                            .testTag("market_prices_desktop_widget")
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(10.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            // Top Bar inside Card: Title + Page Indicator + Refresh
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.clickable {
+                                        pagerScope.launch {
+                                            marketPagerState.animateScrollToPage(if (marketPagerState.currentPage == 0) 1 else 0)
+                                        }
+                                    }
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(18.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (marketPagerState.currentPage == 0) Color(0xFF34D399).copy(alpha = 0.25f)
+                                                else Color(0xFFF97316).copy(alpha = 0.25f)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = if (marketPagerState.currentPage == 0) Icons.Default.TrendingUp else Icons.Default.LocalGasStation,
+                                            contentDescription = null,
+                                            tint = if (marketPagerState.currentPage == 0) Color(0xFF34D399) else Color(0xFFF97316),
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = if (marketPagerState.currentPage == 0) "GIÁ THỊ TRƯỜNG" else "GIÁ XĂNG DẦU",
+                                        color = Color.White.copy(alpha = 0.85f),
+                                        fontSize = 9.5.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -310,79 +351,240 @@ fun DesktopArea(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Language,
-                                        contentDescription = "Mở trực tuyến",
-                                        tint = Color(0xFF60A5FA),
-                                        modifier = Modifier
-                                            .size(14.dp)
-                                            .clickable { viewModel.openCoffeeOnlineDialog() }
-                                    )
+                                    // Page switcher dots
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(if (marketPagerState.currentPage == 0) 6.dp else 4.dp)
+                                                .clip(CircleShape)
+                                                .background(if (marketPagerState.currentPage == 0) Color(0xFF34D399) else Color.White.copy(alpha = 0.35f))
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .size(if (marketPagerState.currentPage == 1) 6.dp else 4.dp)
+                                                .clip(CircleShape)
+                                                .background(if (marketPagerState.currentPage == 1) Color(0xFFF97316) else Color.White.copy(alpha = 0.35f))
+                                        )
+                                    }
+
                                     Icon(
                                         imageVector = Icons.Default.Refresh,
                                         contentDescription = "Cập nhật",
-                                        tint = Color.White.copy(alpha = 0.6f),
+                                        tint = Color.White.copy(alpha = 0.65f),
                                         modifier = Modifier
-                                            .size(15.dp)
+                                            .size(14.dp)
                                             .clickable { viewModel.fetchMarketPrices() }
                                     )
                                 }
                             }
 
-                            // Coffee price section (giacaphe.com)
-                            Column {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Text(
-                                        text = "☕ Cà phê:",
-                                        color = Color(0xFFFED7AA),
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = "giacaphe.com",
-                                        color = Color(0xFF60A5FA),
-                                        fontSize = 9.sp
-                                    )
-                                }
-                                Text(
-                                    text = marketPrices?.averageCoffeePrice ?: "89.400 đ/kg",
-                                    color = Color(0xFFFBBF24),
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Chạm để xem trực tuyến",
-                                    color = Color.White.copy(alpha = 0.5f),
-                                    fontSize = 8.5.sp
-                                )
-                            }
+                            // Horizontal Pager: Page 0 = Cà phê (Lâm Đồng) & Giá Vàng; Page 1 = Giá Xăng Dầu Vùng 1, 2, 3
+                            HorizontalPager(
+                                state = marketPagerState,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                            ) { page ->
+                                if (page == 0) {
+                                    // Page 0: Coffee (Giá tại: Lâm Đồng) & Gold (Click to open full gold dialog)
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(top = 4.dp),
+                                        verticalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        // Coffee section with "Giá tại: Lâm Đồng" as requested
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .clickable { viewModel.openCoffeeOnlineDialog() }
+                                                .padding(vertical = 2.dp)
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                            ) {
+                                                Text(
+                                                    text = "☕ Cà phê",
+                                                    color = Color(0xFFFED7AA),
+                                                    fontSize = 10.5.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    text = "(Giá tại: Lâm Đồng)",
+                                                    color = Color(0xFF60A5FA),
+                                                    fontSize = 8.5.sp,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
+                                            Text(
+                                                text = marketPrices?.lamDongCoffeePrice ?: "89.000 đ/kg",
+                                                color = Color(0xFFFBBF24),
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "Di Linh: 88.900 | Bảo Lộc: 89.000 đ",
+                                                color = Color.White.copy(alpha = 0.6f),
+                                                fontSize = 8.sp
+                                            )
+                                        }
 
-                            // Gold price section (Giá Vàng)
-                            Column {
-                                Text(
-                                    text = "🥇 Giá Vàng:",
-                                    color = Color(0xFFFEF08A),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                val sjcGold = marketPrices?.goldPrices?.find { it.brand.contains("SJC", true) }
-                                    ?: marketPrices?.goldPrices?.firstOrNull()
-                                Text(
-                                    text = "SJC: ${sjcGold?.sellPrice ?: "142.000.000 đ"}",
-                                    color = Color(0xFF4ADE80),
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                val ringGold = marketPrices?.goldPrices?.find { it.brand.contains("Nhẫn", true) }
-                                Text(
-                                    text = "Nhẫn: ${ringGold?.sellPrice ?: "139.000.000 đ"}",
-                                    color = Color(0xFFFDE047),
-                                    fontSize = 10.5.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
+                                        // Gold section - click to open full gold prices as requested
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .clickable { viewModel.openGoldPriceDialog() }
+                                                .padding(vertical = 2.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = "🥇 Giá Vàng",
+                                                    color = Color(0xFFFEF08A),
+                                                    fontSize = 10.5.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    text = "Xem đầy đủ >",
+                                                    color = Color(0xFF34D399),
+                                                    fontSize = 8.5.sp,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
+                                            val sjcGold = marketPrices?.goldPrices?.find { it.brand.contains("SJC") }
+                                                ?: marketPrices?.goldPrices?.firstOrNull()
+                                            Text(
+                                                text = "SJC: ${sjcGold?.sellPrice ?: "142.000.000 đ"}",
+                                                color = Color(0xFF4ADE80),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            val ringGold = marketPrices?.goldPrices?.find { it.brand.contains("Nhẫn") }
+                                            Text(
+                                                text = "Nhẫn 9999: ${ringGold?.sellPrice ?: "139.000.000 đ"}",
+                                                color = Color(0xFFFDE047),
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+
+                                        // Swipe right hint to Gasoline
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    pagerScope.launch { marketPagerState.animateScrollToPage(1) }
+                                                },
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Cuộn sang phải xem Giá Xăng 👉",
+                                                color = Color(0xFFF97316),
+                                                fontSize = 8.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    // Page 1: Petrol prices for Region 1, Region 2, Region 3
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(top = 2.dp),
+                                        verticalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        // Column header: Region 1, Region 2, Region 3
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
+                                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text("Loại xăng/dầu", color = Color.Gray, fontSize = 7.5.sp, modifier = Modifier.weight(1.1f))
+                                            Text("Vùng 1", color = Color(0xFF60A5FA), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
+                                            Text("Vùng 2", color = Color(0xFFFBBF24), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
+                                            Text("Vùng 3", color = Color(0xFFF87171), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
+                                        }
+
+                                        val fuelItems = marketPrices?.petrolPrices ?: listOf(
+                                            com.example.model.PetrolPrice("RON 95-III", "21.010", "21.430", "21.850"),
+                                            com.example.model.PetrolPrice("E5 RON 92", "19.980", "20.370", "20.770"),
+                                            com.example.model.PetrolPrice("Dầu DO 0.05S", "18.980", "19.350", "19.730"),
+                                            com.example.model.PetrolPrice("Dầu Hỏa", "19.120", "19.500", "19.880")
+                                        )
+
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                                        ) {
+                                            fuelItems.take(4).forEach { fuel ->
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = fuel.fuelType.replace("Xăng ", ""),
+                                                        color = Color.White,
+                                                        fontSize = 8.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        modifier = Modifier.weight(1.1f)
+                                                    )
+                                                    Text(
+                                                        text = fuel.region1Price.replace(" đ/lít", ""),
+                                                        color = Color(0xFF93C5FD),
+                                                        fontSize = 8.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.weight(0.9f)
+                                                    )
+                                                    Text(
+                                                        text = fuel.region2Price.replace(" đ/lít", ""),
+                                                        color = Color(0xFFFDE047),
+                                                        fontSize = 8.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.weight(0.9f)
+                                                    )
+                                                    Text(
+                                                        text = fuel.region3Price.replace(" đ/lít", ""),
+                                                        color = Color(0xFFFCA5A5),
+                                                        fontSize = 8.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.weight(0.9f)
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        // Swipe back hint
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    pagerScope.launch { marketPagerState.animateScrollToPage(0) }
+                                                },
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "👈 Cuộn trái xem Cà phê & Vàng",
+                                                color = Color(0xFF34D399),
+                                                fontSize = 8.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

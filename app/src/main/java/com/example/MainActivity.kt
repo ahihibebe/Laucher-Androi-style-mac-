@@ -33,6 +33,8 @@ import com.example.ui.components.CoffeeOnlineDialog
 import com.example.ui.components.DesktopArea
 import com.example.ui.components.DesktopContextMenuDialog
 import com.example.ui.components.DockAppPickerDialog
+import com.example.ui.components.FullCalendarDialog
+import com.example.ui.components.FullGoldPriceDialog
 import com.example.ui.components.LaunchpadScreen
 import com.example.ui.components.MacDock
 import com.example.ui.components.MacSettingsDialog
@@ -82,6 +84,8 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
     // Navigation state
     val isLaunchpadOpen by viewModel.isLaunchpadOpen.collectAsState()
     val isCoffeeOnlineDialogOpen by viewModel.isCoffeeOnlineDialogOpen.collectAsState()
+    val isFullCalendarDialogOpen by viewModel.isFullCalendarDialogOpen.collectAsState()
+    val isGoldPriceDialogOpen by viewModel.isGoldPriceDialogOpen.collectAsState()
     val reorderTargetApp by viewModel.reorderTargetApp.collectAsState()
 
     // Dialog & overlay states
@@ -104,10 +108,15 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
     // Handle back button on sub-screens
     BackHandler(
         enabled = isLaunchpadOpen || isSettingsOpen || isDesktopContextMenuOpen ||
-                isJiggleMode || isCoffeeOnlineDialogOpen || reorderTargetApp != null
+                isJiggleMode || isCoffeeOnlineDialogOpen || isFullCalendarDialogOpen ||
+                isGoldPriceDialogOpen || reorderTargetApp != null
     ) {
         if (reorderTargetApp != null) {
             viewModel.closeReorderDialog()
+        } else if (isFullCalendarDialogOpen) {
+            viewModel.closeFullCalendarDialog()
+        } else if (isGoldPriceDialogOpen) {
+            viewModel.closeGoldPriceDialog()
         } else if (isCoffeeOnlineDialogOpen) {
             viewModel.closeCoffeeOnlineDialog()
         } else if (isJiggleMode) {
@@ -198,6 +207,22 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
         if (isCoffeeOnlineDialogOpen) {
             CoffeeOnlineDialog(
                 onDismiss = { viewModel.closeCoffeeOnlineDialog() }
+            )
+        }
+
+        // Full Perpetual Calendar Dialog
+        if (isFullCalendarDialogOpen) {
+            FullCalendarDialog(
+                onDismiss = { viewModel.closeFullCalendarDialog() }
+            )
+        }
+
+        // Full Gold Price Dialog (theo ngày giờ hiện tại)
+        if (isGoldPriceDialogOpen) {
+            FullGoldPriceDialog(
+                marketPrices = marketPrices,
+                onRefresh = { viewModel.fetchMarketPrices() },
+                onDismiss = { viewModel.closeGoldPriceDialog() }
             )
         }
 

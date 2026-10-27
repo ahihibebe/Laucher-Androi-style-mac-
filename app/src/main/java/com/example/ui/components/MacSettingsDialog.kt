@@ -539,18 +539,27 @@ private fun MarketPricesSettingsPane(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Giá Cà phê & Giá Vàng", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                Text("Nguồn giá: https://giacaphe.com/gia-ca-phe-noi-dia/", color = Color.Gray, fontSize = 11.sp)
+                Text("Giá Thị Trường (Cà phê, Vàng, Xăng dầu)", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Giá tại: Lâm Đồng & Toàn quốc (Cập nhật ngày giờ)", color = Color.Gray, fontSize = 11.sp)
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Button(
+                    onClick = { viewModel.openGoldPriceDialog() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFBBF24)),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 7.dp, vertical = 4.dp)
+                ) {
+                    Text("Bảng Vàng", color = Color.Black, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Button(
                     onClick = { viewModel.openCoffeeOnlineDialog() },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                     shape = RoundedCornerShape(8.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 7.dp, vertical = 4.dp)
                 ) {
-                    Text("Xem trực tuyến", color = Color.White, fontSize = 11.sp)
+                    Text("Cà phê online", color = Color.White, fontSize = 10.5.sp)
                 }
 
                 IconButton(onClick = { viewModel.fetchMarketPrices() }) {
@@ -574,8 +583,8 @@ private fun MarketPricesSettingsPane(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Hiển thị widget Giá Cà phê & Vàng", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                    Text("Nằm đối xứng với widget Lịch vạn niên", color = Color.Gray, fontSize = 10.5.sp)
+                    Text("Hiển thị widget Giá Thị Trường", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Text("Cà phê (Lâm Đồng), Giá Vàng & Xăng dầu Vùng 1, 2, 3", color = Color.Gray, fontSize = 10.5.sp)
                 }
                 Switch(
                     checked = showMarketPrices,
@@ -597,17 +606,33 @@ private fun MarketPricesSettingsPane(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("☕ GIÁ CÀ PHÊ (GIÁ TẠI: LÂM ĐỒNG & TÂY NGUYÊN)", color = Color(0xFFFED7AA), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 marketPrices?.coffeePrices?.forEach { item ->
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Cà phê ${item.province}:", color = Color.LightGray, fontSize = 12.sp)
+                        Text(if (item.province == "Lâm Đồng") "Giá tại: Lâm Đồng" else "Cà phê ${item.province}:", color = if (item.province == "Lâm Đồng") Color(0xFFFDE047) else Color.LightGray, fontSize = 12.sp, fontWeight = if (item.province == "Lâm Đồng") FontWeight.Bold else FontWeight.Normal)
                         Text(item.priceText, color = Color(0xFFFBBF24), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
+
                 HorizontalDivider(color = Color(0xFF3A4D3B))
-                marketPrices?.goldPrices?.forEach { item ->
+                Text("🥇 GIÁ VÀNG THEO NGÀY GIỜ HIỆN TẠI", color = Color(0xFFFEF08A), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                marketPrices?.goldPrices?.take(4)?.forEach { item ->
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("${item.brand} (Bán):", color = Color.LightGray, fontSize = 12.sp)
-                        Text(item.sellPrice, color = Color(0xFF4ADE80), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("${item.brand} (Bán):", color = Color.LightGray, fontSize = 11.5.sp)
+                        Text(item.sellPrice, color = Color(0xFF4ADE80), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                HorizontalDivider(color = Color(0xFF3A4D3B))
+                Text("⛽ GIÁ XĂNG DẦU (VÙNG 1, VÙNG 2, VÙNG 3)", color = Color(0xFF93C5FD), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                marketPrices?.petrolPrices?.forEach { fuel ->
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(fuel.fuelType, color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Vùng 1: ${fuel.region1Price}", color = Color(0xFF93C5FD), fontSize = 10.5.sp)
+                            Text("Vùng 2: ${fuel.region2Price}", color = Color(0xFFFDE047), fontSize = 10.5.sp)
+                            Text("Vùng 3: ${fuel.region3Price}", color = Color(0xFFFCA5A5), fontSize = 10.5.sp)
+                        }
                     }
                 }
             }
@@ -836,7 +861,7 @@ private fun AboutSettingsPane() {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 SpecRow("Nhà phát triển:", "Dev Trường Thanh")
                 SpecRow("Nền tảng:", "Android Jetpack Compose")
-                SpecRow("Tính năng:", "Giá Cà phê (giacaphe.com), Vàng nhẫn, Lịch âm")
+                SpecRow("Tính năng:", "Giá Cà phê (Giá tại: Lâm Đồng), Vàng, Xăng dầu, Lịch vạn niên")
 
                 Row(
                     modifier = Modifier

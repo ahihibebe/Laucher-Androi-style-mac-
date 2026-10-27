@@ -12,8 +12,8 @@ import kotlin.math.sin
  */
 object LunarCalendarHelper {
 
-    private val CAN = listOf("Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý")
-    private val CHI = listOf("Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi")
+    val CAN = listOf("Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý")
+    val CHI = listOf("Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi")
 
     private const val TIMEZONE = 7.0
 
@@ -58,7 +58,7 @@ object LunarCalendarHelper {
                 0.0004 * sin((2.0 * f + m) * dr) -
                 0.0004 * sin((2.0 * f - m) * dr) -
                 0.0006 * sin((2.0 * f + mpr) * dr) +
-                0.0010 * sin((2.0 * f - mpr) * dr) +
+                0.0100 * sin((2.0 * f - mpr) * dr) +
                 0.0005 * sin((m + 2.0 * mpr) * dr)
 
         return jd1 + pt
@@ -82,9 +82,6 @@ object LunarCalendarHelper {
         return theta
     }
 
-    /**
-     * Find the major solar term (Trung khí) of the lunar month beginning at newMoonDay.
-     */
     private fun getSunLongitude(dayNumber: Double): Int {
         return floor(sunLongitude(dayNumber) / (PI / 6.0)).toInt()
     }
@@ -100,45 +97,29 @@ object LunarCalendarHelper {
         val dayNumber = jdFromDate(dd, mm, yy)
         val k = floor((dayNumber - 2415021.0769986) / 29.530588853).toInt()
         var monthStart = getNewMoonDay(k + 1)
-        var currentK = k + 1
         if (monthStart > dayNumber) {
             monthStart = getNewMoonDay(k)
-            currentK = k
         }
 
-        // Find the winter solstice of the previous solar year
-        var a11 = getNewMoonDay(floor((jdFromDate(31, 12, yy) - 2415021.0769986) / 29.530588853).toInt())
-        val sunLong11 = getSunLongitude(a11.toDouble())
-        if (sunLong11 >= 9) {
-            // Winter solstice is in month 11
-        }
-
-        // Standard lookup for 12 months in the year
-        // Simpler accurate derivation:
         val lunarDay = dayNumber - monthStart + 1
         val diff = (monthStart - 2451545.0) / 29.530588853
         var lunarMonth = (((diff + 0.5).toInt() % 12) + 12) % 12 + 1
         var lunarYear = yy
 
-        // Adjust lunar year for dates before Lunar New Year (Tết)
         if (mm <= 2 && lunarMonth >= 11) {
             lunarYear = yy - 1
         } else if (mm >= 11 && lunarMonth <= 2) {
             lunarYear = yy + 1
         }
 
-        // Can Chi calculations:
-        // Can Chi for year: (year + 6) % 10 for Can, (year + 8) % 12 for Chi
         val canYearIndex = ((lunarYear + 6) % 10 + 10) % 10
         val chiYearIndex = ((lunarYear + 8) % 12 + 12) % 12
         val canChiYear = "${CAN[canYearIndex]} ${CHI[chiYearIndex]}"
 
-        // Can Chi for month:
         val canMonthIndex = ((lunarYear * 12 + lunarMonth + 3) % 10 + 10) % 10
         val chiMonthIndex = ((lunarMonth + 1) % 12 + 12) % 12
         val canChiMonth = "${CAN[canMonthIndex]} ${CHI[chiMonthIndex]}"
 
-        // Can Chi for day: (jd + 9) % 10 for Can, (jd + 1) % 12 for Chi
         val canDayIndex = ((dayNumber + 9) % 10 + 10) % 10
         val chiDayIndex = ((dayNumber + 1) % 12 + 12) % 12
         val canChiDay = "${CAN[canDayIndex]} ${CHI[chiDayIndex]}"
@@ -157,14 +138,72 @@ object LunarCalendarHelper {
         )
     }
 
-    /**
-     * Get current lunar date for today
-     */
     fun getTodayLunarDate(): LunarDate {
         val calendar = Calendar.getInstance()
         val day = calendar.get(Calendar.DAY_OF_MONTH)
         val month = calendar.get(Calendar.MONTH) + 1
         val year = calendar.get(Calendar.YEAR)
         return convertSolar2Lunar(day, month, year)
+    }
+
+    fun getDaysInSolarMonth(year: Int, month: Int): Int {
+        val cal = Calendar.getInstance()
+        cal.set(Calendar.YEAR, year)
+        cal.set(Calendar.MONTH, month - 1)
+        cal.set(Calendar.DAY_OF_MONTH, 1)
+        return cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+    }
+
+    /**
+     * Get day of week for 1st of month: 1 = Mon, 2 = Tue, ..., 7 = Sun
+     */
+    fun getFirstDayOfWeek(year: Int, month: Int): Int {
+        val cal = Calendar.getInstance()
+        cal.set(Calendar.YEAR, year)
+        cal.set(Calendar.MONTH, month - 1)
+        cal.set(Calendar.DAY_OF_MONTH, 1)
+        val dow = cal.get(Calendar.DAY_OF_WEEK) // 1 = Sun, 2 = Mon ... 7 = Sat
+        return if (dow == Calendar.SUNDAY) 7 else dow - 1
+    }
+
+    fun getGioHoangDao(canChiDay: String): List<String> {
+        val chiDay = canChiDay.split(" ").lastOrNull() ?: "Tý"
+        return when (chiDay) {
+            "Dần", "Thân" -> listOf("Tý (23-1h)", "Sửu (1-3h)", "Thìn (7-9h)", "Tỵ (9-11h)", "Mùi (13-15h)", "Tuất (19-21h)")
+            "Mão", "Dậu" -> listOf("Tý (23-1h)", "Dần (3-5h)", "Mão (5-7h)", "Ngọ (11-13h)", "Mùi (13-15h)", "Dậu (17-19h)")
+            "Thìn", "Tuất" -> listOf("Dần (3-5h)", "Thìn (7-9h)", "Tỵ (9-11h)", "Thân (15-17h)", "Dậu (17-19h)", "Hợi (21-23h)")
+            "Tỵ", "Hợi" -> listOf("Sửu (1-3h)", "Thìn (7-9h)", "Ngọ (11-13h)", "Mùi (13-15h)", "Tuất (19-21h)", "Hợi (21-23h)")
+            "Tý", "Ngọ" -> listOf("Tý (23-1h)", "Sửu (1-3h)", "Mão (5-7h)", "Ngọ (11-13h)", "Thân (15-17h)", "Dậu (17-19h)")
+            "Sửu", "Mùi" -> listOf("Dần (3-5h)", "Mão (5-7h)", "Tỵ (9-11h)", "Thân (15-17h)", "Tuất (19-21h)", "Hợi (21-23h)")
+            else -> listOf("Tý (23-1h)", "Sửu (1-3h)", "Thìn (7-9h)", "Tỵ (9-11h)", "Mùi (13-15h)", "Tuất (19-21h)")
+        }
+    }
+
+    fun getTietKhi(month: Int, day: Int): String {
+        return when (month) {
+            1 -> if (day < 6) "Đông chí" else if (day < 21) "Tiểu hàn" else "Đại hàn"
+            2 -> if (day < 4) "Đại hàn" else if (day < 19) "Lập xuân" else "Vũ thủy"
+            3 -> if (day < 6) "Vũ thủy" else if (day < 21) "Kinh trập" else "Xuân phân"
+            4 -> if (day < 5) "Xuân phân" else if (day < 20) "Thanh minh" else "Cốc vũ"
+            5 -> if (day < 6) "Cốc vũ" else if (day < 21) "Lập hạ" else "Tiểu mãn"
+            6 -> if (day < 6) "Tiểu mãn" else if (day < 22) "Mang chủng" else "Hạ chí"
+            7 -> if (day < 7) "Hạ chí" else if (day < 23) "Tiểu thử" else "Đại thử"
+            8 -> if (day < 8) "Đại thử" else if (day < 23) "Lập thu" else "Xử thử"
+            9 -> if (day < 8) "Xử thử" else if (day < 23) "Bạch lộ" else "Thu phân"
+            10 -> if (day < 8) "Thu phân" else if (day < 24) "Hàn lộ" else "Sương giáng"
+            11 -> if (day < 8) "Sương giáng" else if (day < 22) "Lập đông" else "Tiểu tuyết"
+            else -> if (day < 7) "Tiểu tuyết" else if (day < 22) "Đại tuyết" else "Đông chí"
+        }
+    }
+
+    fun getHuongXuatHanh(canChiDay: String): Pair<String, String> {
+        val can = canChiDay.split(" ").firstOrNull() ?: "Giáp"
+        return when (can) {
+            "Giáp", "Ất" -> Pair("Đông Nam (Hỷ Thần)", "Đông Bắc (Tài Thần)")
+            "Bính", "Đinh" -> Pair("Chính Nam (Hỷ Thần)", "Chính Đông (Tài Thần)")
+            "Mậu", "Kỷ" -> Pair("Đông Nam (Hỷ Thần)", "Chính Bắc (Tài Thần)")
+            "Canh", "Tân" -> Pair("Tây Bắc (Hỷ Thần)", "Tây Nam (Tài Thần)")
+            else -> Pair("Tây Nam (Hỷ Thần)", "Chính Tây (Tài Thần)")
+        }
     }
 }

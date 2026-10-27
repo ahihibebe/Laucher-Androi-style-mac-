@@ -145,6 +145,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _isCoffeeOnlineDialogOpen = MutableStateFlow(false)
     val isCoffeeOnlineDialogOpen: StateFlow<Boolean> = _isCoffeeOnlineDialogOpen.asStateFlow()
 
+    private val _isFullCalendarDialogOpen = MutableStateFlow(false)
+    val isFullCalendarDialogOpen: StateFlow<Boolean> = _isFullCalendarDialogOpen.asStateFlow()
+
+    private val _isGoldPriceDialogOpen = MutableStateFlow(false)
+    val isGoldPriceDialogOpen: StateFlow<Boolean> = _isGoldPriceDialogOpen.asStateFlow()
+
     private val _reorderTargetApp = MutableStateFlow<AppInfo?>(null)
     val reorderTargetApp: StateFlow<AppInfo?> = _reorderTargetApp.asStateFlow()
 
@@ -201,6 +207,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun closeCoffeeOnlineDialog() {
         _isCoffeeOnlineDialogOpen.value = false
+    }
+
+    fun openFullCalendarDialog() {
+        _isFullCalendarDialogOpen.value = true
+    }
+
+    fun closeFullCalendarDialog() {
+        _isFullCalendarDialogOpen.value = false
+    }
+
+    fun openGoldPriceDialog() {
+        _isGoldPriceDialogOpen.value = true
+    }
+
+    fun closeGoldPriceDialog() {
+        _isGoldPriceDialogOpen.value = false
     }
 
     fun openLaunchpad() {

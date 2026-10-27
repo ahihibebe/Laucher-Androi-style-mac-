@@ -104,7 +104,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
                 ) {
                     InfoLine("Nhà phát triển:", "Dev Trường Thanh")
                     InfoLine("Hệ thống:", "Giao diện macOs cho Android")
-                    InfoLine("Tiện ích:", "Giá Cà phê & Vàng nhẫn, Lịch âm")
+                    InfoLine("Tiện ích:", "Giá Cà phê (Lâm Đồng), Vàng, Xăng dầu, Lịch vạn niên")
 
                     // Facebook link row
                     Row(

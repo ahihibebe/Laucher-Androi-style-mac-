@@ -121,7 +121,7 @@ fun CoffeeOnlineDialog(
 
                     // Window Title
                     Text(
-                        text = "Giá Cà Phê Trực Tuyến - giacaphe.com",
+                        text = "Giá Cà Phê Trực Tuyến (Giá tại: Lâm Đồng)",
                         color = Color.White,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold
