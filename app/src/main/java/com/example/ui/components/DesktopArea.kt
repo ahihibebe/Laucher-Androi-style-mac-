@@ -8,17 +8,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,20 +32,25 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -66,11 +75,15 @@ fun DesktopArea(
     marketPrices: MarketPriceReport?,
     is24Hour: Boolean,
     showCanChi: Boolean,
+    showLaunchpadGuide: Boolean,
+    swipeUpForLaunchpad: Boolean,
+    swipeDownForNotifications: Boolean,
     onNavigateToLaunchpad: () -> Unit,
-    onOpenPhotoPicker: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
+    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     val timeFormat = if (is24Hour) "HH:mm" else "hh:mm a"
     val timeFormatter = remember(is24Hour) { SimpleDateFormat(timeFormat, Locale.getDefault()) }
@@ -79,9 +92,31 @@ fun DesktopArea(
     val formattedTime = remember(currentTime.timeInMillis, is24Hour) { timeFormatter.format(currentTime.time) }
     val formattedDate = remember(currentTime.timeInMillis) { fullDateFormatter.format(currentTime.time) }
 
+    var verticalDragAccumulator by remember { mutableFloatStateOf(0f) }
+
     Box(
         modifier = modifier
             .fillMaxSize()
+            // Detect swipe up (open launchpad) & swipe down (open notifications) gestures
+            .pointerInput(swipeUpForLaunchpad, swipeDownForNotifications) {
+                detectDragGestures(
+                    onDragEnd = {
+                        if (swipeUpForLaunchpad && verticalDragAccumulator < -80f) {
+                            onNavigateToLaunchpad()
+                        } else if (swipeDownForNotifications && verticalDragAccumulator > 80f) {
+                            viewModel.expandNotifications(context)
+                        }
+                        verticalDragAccumulator = 0f
+                    },
+                    onDragCancel = {
+                        verticalDragAccumulator = 0f
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        verticalDragAccumulator += dragAmount.y
+                    }
+                )
+            }
             .combinedClickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -94,11 +129,9 @@ fun DesktopArea(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(horizontal = 14.dp, vertical = 8.dp),
+                .padding(top = statusBarTop + 12.dp, start = 14.dp, end = 14.dp, bottom = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(6.dp))
-
             // Symmetrical Cards: Left = Lịch Vạn Niên & Giờ; Right = Giá Cà Phê & Giá Vàng Nhẫn
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -257,9 +290,9 @@ fun DesktopArea(
                                 Icon(
                                     imageVector = Icons.Default.Refresh,
                                     contentDescription = "Cập nhật",
-                                    tint = Color.White.copy(alpha = 0.5f),
+                                    tint = Color.White.copy(alpha = 0.6f),
                                     modifier = Modifier
-                                        .size(14.dp)
+                                        .size(15.dp)
                                         .clickable { viewModel.fetchMarketPrices() }
                                 )
                             }
@@ -302,13 +335,13 @@ fun DesktopArea(
                                 Text(
                                     text = "Bán: ${gold?.sellPrice ?: "89.200.000 đ"}",
                                     color = Color(0xFF4ADE80),
-                                    fontSize = 12.5.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Mua: ${gold?.buyPrice ?: "87.900.000 đ"}",
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    fontSize = 10.sp
+                                    text = "Cập nhật: ${marketPrices?.lastUpdated ?: formattedDate}",
+                                    color = Color.White.copy(alpha = 0.6f),
+                                    fontSize = 8.5.sp
                                 )
                             }
                         }
@@ -316,73 +349,75 @@ fun DesktopArea(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            // Swipe right guide banner to Launchpad (optional for clean desktop)
+            if (showLaunchpadGuide) {
+                Spacer(modifier = Modifier.height(18.dp))
 
-            // Swipe right guide banner to Launchpad
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = Color.White.copy(alpha = 0.14f),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onNavigateToLaunchpad() }
-                    .border(
-                        1.dp,
-                        Color.White.copy(alpha = 0.2f),
-                        RoundedCornerShape(18.dp)
-                    )
-                    .testTag("launchpad_swipe_guide_button")
-            ) {
-                Row(
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = Color.White.copy(alpha = 0.14f),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .clickable { onNavigateToLaunchpad() }
+                        .border(
+                            1.dp,
+                            Color.White.copy(alpha = 0.2f),
+                            RoundedCornerShape(18.dp)
+                        )
+                        .testTag("launchpad_swipe_guide_button")
                 ) {
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(Color(0xFFF472B6), Color(0xFFEC4899))
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Apps,
-                                contentDescription = "Launchpad",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(Color(0xFFF472B6), Color(0xFFEC4899))
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Apps,
+                                    contentDescription = "Launchpad",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column {
+                                Text(
+                                    text = "Tất cả ứng dụng (Launchpad)",
+                                    color = Color.White,
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "Vuốt sang phải / vuốt lên / chạm để mở",
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontSize = 11.sp
+                                )
+                            }
                         }
 
-                        Column {
-                            Text(
-                                text = "Tất cả ứng dụng (Launchpad)",
-                                color = Color.White,
-                                fontSize = 13.5.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = "Vuốt sang phải 👉 hoặc nhấn giữ màn hình để cài đặt",
-                                color = Color.White.copy(alpha = 0.7f),
-                                fontSize = 11.sp
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.8f),
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
-
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.8f),
-                        modifier = Modifier.size(18.dp)
-                    )
                 }
             }
 

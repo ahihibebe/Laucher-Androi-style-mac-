@@ -1,9 +1,9 @@
 package com.example.viewmodel
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.VibrationEffect
@@ -43,6 +43,7 @@ import kotlinx.coroutines.withContext
 import java.util.Calendar
 
 enum class SettingsCategory(val title: String) {
+    GESTURES("Thao tác vuốt & Cử chỉ"),
     CLOCK_AND_LUNAR("Đồng hồ & Lịch âm"),
     MARKET_PRICES("Giá Cà phê & Vàng"),
     DOCK("Thanh Dock (4 ứng dụng)"),
@@ -65,12 +66,23 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _hiddenPackages = MutableStateFlow(prefs.hiddenPackages)
     val hiddenPackages: StateFlow<Set<String>> = _hiddenPackages.asStateFlow()
 
-    val filteredApps: StateFlow<List<AppInfo>> = combine(_installedApps, _searchQuery, _hiddenPackages) { apps, query, hidden ->
+    private val _customAppOrder = MutableStateFlow(prefs.appOrder)
+
+    val filteredApps: StateFlow<List<AppInfo>> = combine(_installedApps, _searchQuery, _hiddenPackages, _customAppOrder) { apps, query, hidden, order ->
         val visibleApps = apps.filter { !hidden.contains(it.packageName) }
-        if (query.isBlank()) {
-            visibleApps
+
+        // Sort: if in customAppOrder, prioritize based on custom index, else alphabetical
+        val sortedApps = if (order.isNotEmpty()) {
+            val orderMap = order.mapIndexed { idx, pkg -> pkg to idx }.toMap()
+            visibleApps.sortedWith(compareBy({ orderMap[it.packageName] ?: Int.MAX_VALUE }, { it.label.lowercase() }))
         } else {
-            visibleApps.filter {
+            visibleApps.sortedBy { it.label.lowercase() }
+        }
+
+        if (query.isBlank()) {
+            sortedApps
+        } else {
+            sortedApps.filter {
                 it.label.contains(query, ignoreCase = true) || it.packageName.contains(query, ignoreCase = true)
             }
         }
@@ -109,11 +121,24 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _customWallpaperUri = MutableStateFlow(prefs.customWallpaperUri)
     val customWallpaperUri: StateFlow<String?> = _customWallpaperUri.asStateFlow()
 
+    // Gesture preferences
+    private val _swipeRightForLaunchpad = MutableStateFlow(prefs.swipeRightForLaunchpad)
+    val swipeRightForLaunchpad: StateFlow<Boolean> = _swipeRightForLaunchpad.asStateFlow()
+
+    private val _swipeUpForLaunchpad = MutableStateFlow(prefs.swipeUpForLaunchpad)
+    val swipeUpForLaunchpad: StateFlow<Boolean> = _swipeUpForLaunchpad.asStateFlow()
+
+    private val _swipeDownForNotifications = MutableStateFlow(prefs.swipeDownForNotifications)
+    val swipeDownForNotifications: StateFlow<Boolean> = _swipeDownForNotifications.asStateFlow()
+
+    private val _showLaunchpadGuide = MutableStateFlow(prefs.showLaunchpadGuide)
+    val showLaunchpadGuide: StateFlow<Boolean> = _showLaunchpadGuide.asStateFlow()
+
     // 4 Dock apps
     private val _dockApps = MutableStateFlow<List<AppInfo>>(emptyList())
     val dockApps: StateFlow<List<AppInfo>> = _dockApps.asStateFlow()
 
-    // Jiggle Mode (iOS / macOS wiggle edit mode)
+    // Jiggle Mode
     private val _isJiggleMode = MutableStateFlow(false)
     val isJiggleMode: StateFlow<Boolean> = _isJiggleMode.asStateFlow()
 
@@ -121,16 +146,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _isSettingsOpen = MutableStateFlow(false)
     val isSettingsOpen: StateFlow<Boolean> = _isSettingsOpen.asStateFlow()
 
-    private val _isControlCenterOpen = MutableStateFlow(false)
-    val isControlCenterOpen: StateFlow<Boolean> = _isControlCenterOpen.asStateFlow()
-
     private val _isAboutOpen = MutableStateFlow(false)
     val isAboutOpen: StateFlow<Boolean> = _isAboutOpen.asStateFlow()
 
     private val _isDesktopContextMenuOpen = MutableStateFlow(false)
     val isDesktopContextMenuOpen: StateFlow<Boolean> = _isDesktopContextMenuOpen.asStateFlow()
 
-    private val _selectedSettingsCategory = MutableStateFlow(SettingsCategory.CLOCK_AND_LUNAR)
+    private val _selectedSettingsCategory = MutableStateFlow(SettingsCategory.GESTURES)
     val selectedSettingsCategory: StateFlow<SettingsCategory> = _selectedSettingsCategory.asStateFlow()
 
     private val _dockSlotPicker = MutableStateFlow<Int?>(null)
@@ -177,7 +199,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             for (ri in resolveInfos) {
                 val pkgName = ri.activityInfo.packageName
                 if (pkgName == getApplication<Application>().packageName) continue
-                // Prevent duplicate packages from throwing unique key exceptions in LazyGrid
                 if (seenPackages.contains(pkgName)) continue
                 seenPackages.add(pkgName)
 
@@ -202,8 +223,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             if (appList.isEmpty()) {
                 appList.addAll(createFallbackApps())
             }
-
-            appList.sortBy { it.label.lowercase() }
 
             withContext(Dispatchers.Main) {
                 _installedApps.value = appList
@@ -270,6 +289,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _isJiggleMode.value = active
     }
 
+    fun moveAppToTop(app: AppInfo) {
+        val currentOrder = _customAppOrder.value.toMutableList()
+        currentOrder.remove(app.packageName)
+        currentOrder.add(0, app.packageName)
+        _customAppOrder.value = currentOrder
+        prefs.appOrder = currentOrder
+        triggerVibration()
+    }
+
     fun hideApp(app: AppInfo) {
         prefs.hidePackage(app.packageName)
         _hiddenPackages.value = prefs.hiddenPackages
@@ -288,7 +316,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             }
             context.startActivity(intent)
         } catch (e: Exception) {
-            // Fallback to app details
             try {
                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                     data = Uri.parse("package:${app.packageName}")
@@ -303,7 +330,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun launchApp(context: Context, app: AppInfo) {
         if (_isJiggleMode.value) {
-            // Tapping during jiggle mode can exit jiggle mode
             _isJiggleMode.value = false
             return
         }
@@ -331,7 +357,26 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
             }
         } catch (e: Exception) {
-            // Graceful fallback
+            // Fallback
+        }
+    }
+
+    @SuppressLint("WrongConstant")
+    fun expandNotifications(context: Context) {
+        try {
+            val statusBarService = context.getSystemService("statusbar")
+            val statusBarManager = Class.forName("android.app.StatusBarManager")
+            val expand = statusBarManager.getMethod("expandNotificationsPanel")
+            expand.invoke(statusBarService)
+        } catch (e: Exception) {
+            try {
+                val statusBarService = context.getSystemService("statusbar")
+                val statusBarManager = Class.forName("android.app.StatusBarManager")
+                val expand = statusBarManager.getMethod("expand")
+                expand.invoke(statusBarService)
+            } catch (e2: Exception) {
+                // Ignore
+            }
         }
     }
 
@@ -378,6 +423,26 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         prefs.showCanChi = show
     }
 
+    fun toggleSwipeRightForLaunchpad(enabled: Boolean) {
+        _swipeRightForLaunchpad.value = enabled
+        prefs.swipeRightForLaunchpad = enabled
+    }
+
+    fun toggleSwipeUpForLaunchpad(enabled: Boolean) {
+        _swipeUpForLaunchpad.value = enabled
+        prefs.swipeUpForLaunchpad = enabled
+    }
+
+    fun toggleSwipeDownForNotifications(enabled: Boolean) {
+        _swipeDownForNotifications.value = enabled
+        prefs.swipeDownForNotifications = enabled
+    }
+
+    fun toggleLaunchpadGuide(enabled: Boolean) {
+        _showLaunchpadGuide.value = enabled
+        prefs.showLaunchpadGuide = enabled
+    }
+
     fun setWallpaper(wallpaper: WallpaperTheme) {
         _customWallpaperUri.value = null
         prefs.customWallpaperUri = null
@@ -408,7 +473,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _dockSlotPicker.value = null
     }
 
-    fun openSettingsDialog(category: SettingsCategory = SettingsCategory.CLOCK_AND_LUNAR) {
+    fun openSettingsDialog(category: SettingsCategory = SettingsCategory.GESTURES) {
         _selectedSettingsCategory.value = category
         _isSettingsOpen.value = true
     }
@@ -419,14 +484,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun selectSettingsCategory(category: SettingsCategory) {
         _selectedSettingsCategory.value = category
-    }
-
-    fun toggleControlCenter() {
-        _isControlCenterOpen.value = !_isControlCenterOpen.value
-    }
-
-    fun closeControlCenter() {
-        _isControlCenterOpen.value = false
     }
 
     fun openAboutDialog() {

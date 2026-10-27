@@ -10,37 +10,28 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.example.ui.components.AboutDialog
-import com.example.ui.components.ControlCenterDropdown
 import com.example.ui.components.DesktopArea
 import com.example.ui.components.DesktopContextMenuDialog
 import com.example.ui.components.DockAppPickerDialog
 import com.example.ui.components.LaunchpadScreen
 import com.example.ui.components.MacDock
 import com.example.ui.components.MacSettingsDialog
-import com.example.ui.components.TopMenuBar
 import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.LauncherViewModel
 import kotlinx.coroutines.launch
@@ -81,16 +72,21 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
     val filteredApps by viewModel.filteredApps.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
 
+    // Gestures states
+    val swipeRightForLaunchpad by viewModel.swipeRightForLaunchpad.collectAsState()
+    val swipeUpForLaunchpad by viewModel.swipeUpForLaunchpad.collectAsState()
+    val swipeDownForNotifications by viewModel.swipeDownForNotifications.collectAsState()
+    val showLaunchpadGuide by viewModel.showLaunchpadGuide.collectAsState()
+
     // Dialog & overlay states
     val isSettingsOpen by viewModel.isSettingsOpen.collectAsState()
     val selectedCategory by viewModel.selectedSettingsCategory.collectAsState()
-    val isControlCenterOpen by viewModel.isControlCenterOpen.collectAsState()
     val isAboutOpen by viewModel.isAboutOpen.collectAsState()
     val isDesktopContextMenuOpen by viewModel.isDesktopContextMenuOpen.collectAsState()
     val dockSlotPicker by viewModel.dockSlotPicker.collectAsState()
     val isJiggleMode by viewModel.isJiggleMode.collectAsState()
 
-    // Standard Android Photo Picker for Custom Wallpaper
+    // Photo Picker
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
@@ -100,13 +96,11 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
     }
 
     // Handle back button on sub-screens
-    BackHandler(enabled = pagerState.currentPage == 1 || isControlCenterOpen || isSettingsOpen || isDesktopContextMenuOpen || isJiggleMode) {
+    BackHandler(enabled = pagerState.currentPage == 1 || isSettingsOpen || isDesktopContextMenuOpen || isJiggleMode) {
         if (isJiggleMode) {
             viewModel.setJiggleMode(false)
         } else if (isDesktopContextMenuOpen) {
             viewModel.closeDesktopContextMenu()
-        } else if (isControlCenterOpen) {
-            viewModel.closeControlCenter()
         } else if (isSettingsOpen) {
             viewModel.closeSettingsDialog()
         } else if (pagerState.currentPage == 1) {
@@ -117,7 +111,7 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Wallpaper: Custom device photo or macOS preset gradient
+        // Wallpaper: Custom device photo or macOS preset
         if (customWallpaperUri != null) {
             Image(
                 painter = rememberAsyncImagePainter(model = customWallpaperUri),
@@ -134,15 +128,17 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
         }
 
         // Horizontal Pager: Page 0 = Desktop; Page 1 = Launchpad
+        // userScrollEnabled is governed by swipeRightForLaunchpad toggle!
         HorizontalPager(
             state = pagerState,
+            userScrollEnabled = swipeRightForLaunchpad,
             modifier = Modifier
                 .fillMaxSize()
                 .testTag("launcher_horizontal_pager")
         ) { page ->
             when (page) {
                 0 -> {
-                    // Desktop Screen
+                    // Desktop Screen (Top Menu Bar and Control Center removed as requested)
                     Box(modifier = Modifier.fillMaxSize()) {
                         DesktopArea(
                             viewModel = viewModel,
@@ -154,38 +150,18 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
                             marketPrices = marketPrices,
                             is24Hour = is24Hour,
                             showCanChi = showCanChi,
+                            showLaunchpadGuide = showLaunchpadGuide,
+                            swipeUpForLaunchpad = swipeUpForLaunchpad,
+                            swipeDownForNotifications = swipeDownForNotifications,
                             onNavigateToLaunchpad = {
                                 coroutineScope.launch {
                                     pagerState.animateScrollToPage(1)
                                 }
                             },
-                            onOpenPhotoPicker = {
-                                photoPickerLauncher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
-                            },
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(top = 40.dp)
+                            modifier = Modifier.fillMaxSize()
                         )
 
-                        // Top macOS Menu Bar (clean: removed finder/tệp/xem/tìm kiếm/wifi/pin, added pink apple)
-                        TopMenuBar(
-                            viewModel = viewModel,
-                            currentTime = currentTime,
-                            lunarDate = currentLunarDate,
-                            showClock = showClock,
-                            showLunar = showLunar,
-                            is24Hour = is24Hour,
-                            onOpenLaunchpad = {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(1)
-                                }
-                            },
-                            modifier = Modifier.align(Alignment.TopCenter)
-                        )
-
-                        // Bottom macOS Dock (4 apps with frosted glass frame)
+                        // Bottom macOS Dock (4 apps without dots)
                         MacDock(
                             viewModel = viewModel,
                             dockApps = dockApps,
@@ -210,20 +186,6 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
             }
         }
 
-        // Control Center Dropdown
-        AnimatedVisibility(
-            visible = isControlCenterOpen,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 42.dp, end = 12.dp)
-        ) {
-            ControlCenterDropdown(
-                onDismiss = { viewModel.closeControlCenter() }
-            )
-        }
-
         // macOS System Settings Window Modal
         if (isSettingsOpen) {
             MacSettingsDialog(
@@ -232,6 +194,10 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
                 showClock = showClock,
                 showLunar = showLunar,
                 showMarketPrices = showMarketPrices,
+                swipeRightForLaunchpad = swipeRightForLaunchpad,
+                swipeUpForLaunchpad = swipeUpForLaunchpad,
+                swipeDownForNotifications = swipeDownForNotifications,
+                showLaunchpadGuide = showLaunchpadGuide,
                 marketPrices = marketPrices,
                 is24Hour = is24Hour,
                 showCanChi = showCanChi,

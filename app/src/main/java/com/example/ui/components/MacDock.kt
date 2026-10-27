@@ -199,15 +199,5 @@ private fun DockItem(
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-        // macOS running indicator dot
-        Box(
-            modifier = Modifier
-                .size(4.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.85f))
-        )
     }
 }

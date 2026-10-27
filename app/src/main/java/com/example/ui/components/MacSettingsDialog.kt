@@ -29,11 +29,14 @@ import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Dock
+import androidx.compose.material.icons.filled.Gesture
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Swipe
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Wallpaper
@@ -81,6 +84,10 @@ fun MacSettingsDialog(
     showClock: Boolean,
     showLunar: Boolean,
     showMarketPrices: Boolean,
+    swipeRightForLaunchpad: Boolean,
+    swipeUpForLaunchpad: Boolean,
+    swipeDownForNotifications: Boolean,
+    showLaunchpadGuide: Boolean,
     marketPrices: MarketPriceReport?,
     is24Hour: Boolean,
     showCanChi: Boolean,
@@ -117,7 +124,6 @@ fun MacSettingsDialog(
                         .padding(horizontal = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Traffic lights
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -166,6 +172,12 @@ fun MacSettingsDialog(
                             .padding(vertical = 10.dp, horizontal = 6.dp)
                     ) {
                         SettingsSidebarItem(
+                            icon = Icons.Default.Gesture,
+                            label = "Thao tác vuốt",
+                            isSelected = selectedCategory == SettingsCategory.GESTURES,
+                            onClick = { viewModel.selectSettingsCategory(SettingsCategory.GESTURES) }
+                        )
+                        SettingsSidebarItem(
                             icon = Icons.Default.Schedule,
                             label = "Đồng hồ & Lịch âm",
                             isSelected = selectedCategory == SettingsCategory.CLOCK_AND_LUNAR,
@@ -212,6 +224,15 @@ fun MacSettingsDialog(
                             .padding(14.dp)
                     ) {
                         when (selectedCategory) {
+                            SettingsCategory.GESTURES -> {
+                                GesturesSettingsPane(
+                                    viewModel = viewModel,
+                                    swipeRightForLaunchpad = swipeRightForLaunchpad,
+                                    swipeUpForLaunchpad = swipeUpForLaunchpad,
+                                    swipeDownForNotifications = swipeDownForNotifications,
+                                    showLaunchpadGuide = showLaunchpadGuide
+                                )
+                            }
                             SettingsCategory.CLOCK_AND_LUNAR -> {
                                 ClockAndLunarSettingsPane(
                                     viewModel = viewModel,
@@ -295,6 +316,110 @@ private fun SettingsSidebarItem(
 }
 
 @Composable
+private fun GesturesSettingsPane(
+    viewModel: LauncherViewModel,
+    swipeRightForLaunchpad: Boolean,
+    swipeUpForLaunchpad: Boolean,
+    swipeDownForNotifications: Boolean,
+    showLaunchpadGuide: Boolean
+) {
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+    ) {
+        Text("Thao tác vuốt & Cử chỉ", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Text("Tùy chỉnh cử chỉ điều khiển trên màn hình chính", color = Color.Gray, fontSize = 11.sp)
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = Color(0xFF282828),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                // Switch 1: Swipe Right for Launchpad
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Vuốt sang phải mở Launchpad", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Text("Kéo ngang màn hình chính để mở tất cả ứng dụng", color = Color.Gray, fontSize = 10.5.sp)
+                    }
+                    Switch(
+                        checked = swipeRightForLaunchpad,
+                        onCheckedChange = { viewModel.toggleSwipeRightForLaunchpad(it) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007AFF))
+                    )
+                }
+
+                HorizontalDivider(color = Color(0xFF383838), modifier = Modifier.padding(vertical = 8.dp))
+
+                // Switch 2: Swipe Up for Launchpad
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Trượt lên bật tất cả ứng dụng", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Text("Vuốt từ dưới lên trên màn hình chính để mở nhanh Launchpad", color = Color.Gray, fontSize = 10.5.sp)
+                    }
+                    Switch(
+                        checked = swipeUpForLaunchpad,
+                        onCheckedChange = { viewModel.toggleSwipeUpForLaunchpad(it) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007AFF))
+                    )
+                }
+
+                HorizontalDivider(color = Color(0xFF383838), modifier = Modifier.padding(vertical = 8.dp))
+
+                // Switch 3: Swipe Down for Notifications
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Trượt xuống mở thanh thông báo", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Text("Vuốt từ trên xuống tại bất kỳ đâu để kéo bảng thông báo", color = Color.Gray, fontSize = 10.5.sp)
+                    }
+                    Switch(
+                        checked = swipeDownForNotifications,
+                        onCheckedChange = { viewModel.toggleSwipeDownForNotifications(it) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007AFF))
+                    )
+                }
+
+                HorizontalDivider(color = Color(0xFF383838), modifier = Modifier.padding(vertical = 8.dp))
+
+                // Switch 4: Show/Hide Launchpad Guide Banner on Desktop
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Hướng dẫn mở ứng dụng", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Text("Tắt thanh hướng dẫn ở màn hình chính để gọn gàng hơn", color = Color.Gray, fontSize = 10.5.sp)
+                    }
+                    Switch(
+                        checked = showLaunchpadGuide,
+                        onCheckedChange = { viewModel.toggleLaunchpadGuide(it) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007AFF))
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun ClockAndLunarSettingsPane(
     viewModel: LauncherViewModel,
     showClock: Boolean,
@@ -310,17 +435,8 @@ private fun ClockAndLunarSettingsPane(
             .fillMaxSize()
             .verticalScroll(scrollState)
     ) {
-        Text(
-            text = "Đồng hồ & Lịch âm",
-            color = Color.White,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Tùy chỉnh bật tắt hiển thị thời gian và Âm lịch Việt Nam",
-            color = Color.Gray,
-            fontSize = 11.sp
-        )
+        Text("Đồng hồ & Lịch âm", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Text("Tùy chỉnh bật tắt hiển thị thời gian và Âm lịch Việt Nam", color = Color.Gray, fontSize = 11.sp)
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -330,7 +446,6 @@ private fun ClockAndLunarSettingsPane(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                // Switch 1: Toggle Clock
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -338,19 +453,17 @@ private fun ClockAndLunarSettingsPane(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Hiển thị đồng hồ", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                        Text("Bật/tắt giờ trên widget và thanh menu", color = Color.Gray, fontSize = 10.5.sp)
+                        Text("Bật/tắt giờ trên widget", color = Color.Gray, fontSize = 10.5.sp)
                     }
                     Switch(
                         checked = showClock,
                         onCheckedChange = { viewModel.toggleClock(it) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007AFF)),
-                        modifier = Modifier.testTag("toggle_clock_switch")
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007AFF))
                     )
                 }
 
                 HorizontalDivider(color = Color(0xFF383838), modifier = Modifier.padding(vertical = 8.dp))
 
-                // Switch 2: Toggle Lunar Calendar
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -363,14 +476,12 @@ private fun ClockAndLunarSettingsPane(
                     Switch(
                         checked = showLunar,
                         onCheckedChange = { viewModel.toggleLunar(it) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007AFF)),
-                        modifier = Modifier.testTag("toggle_lunar_switch")
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007AFF))
                     )
                 }
 
                 HorizontalDivider(color = Color(0xFF383838), modifier = Modifier.padding(vertical = 8.dp))
 
-                // Switch 3: Can Chi
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -389,7 +500,6 @@ private fun ClockAndLunarSettingsPane(
 
                 HorizontalDivider(color = Color(0xFF383838), modifier = Modifier.padding(vertical = 8.dp))
 
-                // Switch 4: 24h format
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -429,17 +539,8 @@ private fun MarketPricesSettingsPane(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(
-                    text = "Giá Cà phê & Vàng",
-                    color = Color.White,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Dữ liệu cập nhật từ trang giacaphe.com",
-                    color = Color.Gray,
-                    fontSize = 11.sp
-                )
+                Text("Giá Cà phê & Vàng", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text("Dữ liệu trực tiếp từ trang giacaphe.com", color = Color.Gray, fontSize = 11.sp)
             }
 
             IconButton(onClick = { viewModel.fetchMarketPrices() }) {
@@ -449,7 +550,6 @@ private fun MarketPricesSettingsPane(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Toggle Switch
         Surface(
             shape = RoundedCornerShape(12.dp),
             color = Color(0xFF282828),
@@ -463,17 +563,8 @@ private fun MarketPricesSettingsPane(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Hiển thị widget Giá Cà phê & Vàng",
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = "Nằm đối xứng với widget Lịch vạn niên & giờ",
-                        color = Color.Gray,
-                        fontSize = 10.5.sp
-                    )
+                    Text("Hiển thị widget Giá Cà phê & Vàng", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Text("Nằm đối xứng với widget Lịch vạn niên", color = Color.Gray, fontSize = 10.5.sp)
                 }
                 Switch(
                     checked = showMarketPrices,
@@ -485,8 +576,7 @@ private fun MarketPricesSettingsPane(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Price details
-        Text("CHI TIẾT GIÁ THỊ TRƯỜNG", color = Color.Gray, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+        Text("CẬP NHẬT LÚC: ${marketPrices?.lastUpdated ?: "Hiện tại"}", color = Color.Gray, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(6.dp))
 
         Surface(
@@ -496,22 +586,18 @@ private fun MarketPricesSettingsPane(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Cà phê Đắk Lắk:", color = Color.LightGray, fontSize = 12.sp)
-                    Text("122.000 đ/kg", color = Color(0xFFFBBF24), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Cà phê Lâm Đồng:", color = Color.LightGray, fontSize = 12.sp)
-                    Text("121.200 đ/kg", color = Color(0xFFFBBF24), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                marketPrices?.coffeePrices?.forEach { item ->
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Cà phê ${item.province}:", color = Color.LightGray, fontSize = 12.sp)
+                        Text(item.priceText, color = Color(0xFFFBBF24), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
                 HorizontalDivider(color = Color(0xFF3A4D3B))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Vàng Nhẫn 9999 SJC (Bán):", color = Color.LightGray, fontSize = 12.sp)
-                    Text("89.200.000 đ", color = Color(0xFF4ADE80), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Vàng Nhẫn 9999 SJC (Mua):", color = Color.LightGray, fontSize = 12.sp)
-                    Text("87.900.000 đ", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                marketPrices?.goldPrices?.forEach { item ->
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("${item.brand} (Bán):", color = Color.LightGray, fontSize = 12.sp)
+                        Text(item.sellPrice, color = Color(0xFF4ADE80), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -603,7 +689,6 @@ private fun WallpaperSettingsPane(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Custom device wallpaper button
         Button(
             onClick = onPickImage,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF472B6)),
@@ -740,7 +825,7 @@ private fun AboutSettingsPane() {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 SpecRow("Nhà phát triển:", "Dev Trường Thanh")
                 SpecRow("Nền tảng:", "Android Jetpack Compose")
-                SpecRow("Tính năng:", "Giá Cà phê, Vàng nhẫn, Lịch âm")
+                SpecRow("Tính năng:", "Giá Cà phê (giacaphe.com), Vàng nhẫn, Lịch âm")
 
                 Row(
                     modifier = Modifier

@@ -1,5 +1,10 @@
 package com.example.ui.components
 
+import android.app.Activity
+import android.content.Intent
+import android.speech.RecognizerIntent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -33,10 +38,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.North
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -85,7 +91,19 @@ fun LaunchpadScreen(
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val isJiggleMode by viewModel.isJiggleMode.collectAsState()
 
-    // Wiggle rotation animation for jiggle mode like iPhone
+    // Voice Search Speech Recognizer
+    val speechLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val spokenText = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (!spokenText.isNullOrBlank()) {
+                viewModel.setSearchQuery(spokenText)
+            }
+        }
+    }
+
+    // Wiggle animation like iPhone
     val infiniteTransition = rememberInfiniteTransition(label = "jiggle_transition")
     val rotationAngle by infiniteTransition.animateFloat(
         initialValue = -2.5f,
@@ -107,13 +125,13 @@ fun LaunchpadScreen(
                 .fillMaxSize()
                 .padding(top = statusBarTop)
         ) {
-            // Header: Back button + Spotlight Search Bar + Done button if in jiggle mode
+            // Header: Back button + Search bar with Microphone + Done button
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 IconButton(
                     onClick = {
@@ -133,7 +151,7 @@ fun LaunchpadScreen(
                     )
                 }
 
-                // Spotlight search field
+                // Spotlight search field with Mic
                 Surface(
                     shape = RoundedCornerShape(14.dp),
                     color = Color.White.copy(alpha = 0.18f),
@@ -143,9 +161,9 @@ fun LaunchpadScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Search,
@@ -182,7 +200,7 @@ fun LaunchpadScreen(
                         if (searchQuery.isNotEmpty()) {
                             IconButton(
                                 onClick = { viewModel.setSearchQuery("") },
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(22.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Clear,
@@ -192,10 +210,33 @@ fun LaunchpadScreen(
                                 )
                             }
                         }
+
+                        // Microphone Voice Search Button
+                        IconButton(
+                            onClick = {
+                                try {
+                                    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                        putExtra(RecognizerIntent.EXTRA_LANGUAGE, "vi-VN")
+                                        putExtra(RecognizerIntent.EXTRA_PROMPT, "Nói tên ứng dụng bạn muốn tìm...")
+                                    }
+                                    speechLauncher.launch(intent)
+                                } catch (e: Exception) {
+                                    // Fallback if speech recognizer is unavailable
+                                }
+                            },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = "Tìm kiếm bằng giọng nói",
+                                tint = Color(0xFFF472B6),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
 
-                // "Xong" button when in jiggle edit mode
                 if (isJiggleMode) {
                     Button(
                         onClick = { viewModel.setJiggleMode(false) },
@@ -224,7 +265,7 @@ fun LaunchpadScreen(
                 )
 
                 Text(
-                    text = if (isJiggleMode) "Chế độ chỉnh sửa (nhấn - để xóa/ẩn)" else "${apps.size} ứng dụng",
+                    text = if (isJiggleMode) "Nhấn giữ hoặc chạm để di chuyển, xóa, ẩn" else "${apps.size} ứng dụng",
                     color = if (isJiggleMode) Color(0xFFF472B6) else Color.White.copy(alpha = 0.6f),
                     fontSize = 11.5.sp,
                     fontWeight = if (isJiggleMode) FontWeight.Medium else FontWeight.Normal
@@ -233,7 +274,7 @@ fun LaunchpadScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Apps Grid with crash-proof unique keys and proper padding
+            // Apps Grid
             if (apps.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -242,7 +283,7 @@ fun LaunchpadScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Không tìm thấy ứng dụng nào",
+                        text = "Không tìm thấy ứng dụng nào khớp",
                         color = Color.White.copy(alpha = 0.7f),
                         fontSize = 14.sp,
                         textAlign = TextAlign.Center,
@@ -260,7 +301,6 @@ fun LaunchpadScreen(
                         .navigationBarsPadding()
                         .testTag("launchpad_apps_grid")
                 ) {
-                    // Fix: Use index-based unique key to prevent key collision crashes when scrolling to bottom!
                     itemsIndexed(
                         items = apps,
                         key = { index, app -> "${app.packageName}_$index" }
@@ -274,6 +314,9 @@ fun LaunchpadScreen(
                             onLaunch = { viewModel.launchApp(context, app) },
                             onLongPress = {
                                 viewModel.setJiggleMode(true)
+                            },
+                            onMoveToTop = {
+                                viewModel.moveAppToTop(app)
                             },
                             onDelete = {
                                 viewModel.uninstallApp(context, app)
@@ -300,6 +343,7 @@ private fun LaunchpadAppItem(
     rotationAngle: Float,
     onLaunch: () -> Unit,
     onLongPress: () -> Unit,
+    onMoveToTop: () -> Unit,
     onDelete: () -> Unit,
     onHide: () -> Unit,
     onPinToDockSlot: (Int) -> Unit
@@ -332,7 +376,6 @@ private fun LaunchpadAppItem(
         }
 
         Box(contentAlignment = Alignment.TopEnd) {
-            // Translucent frosted glass frame like macOS dock
             Surface(
                 shape = RoundedCornerShape(18.dp),
                 color = Color.White.copy(alpha = 0.22f),
@@ -375,7 +418,6 @@ private fun LaunchpadAppItem(
                 }
             }
 
-            // Red Delete badge when in jiggle mode (like iPhone)
             if (isJiggleMode) {
                 Box(
                     modifier = Modifier
@@ -408,26 +450,18 @@ private fun LaunchpadAppItem(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Dropdown Menu: Di chuyển, Xóa, Ẩn như iPhone
+        // Dropdown Menu: Di chuyển, Ghim, Xóa, Ẩn
         DropdownMenu(
             expanded = isMenuOpen,
             onDismissRequest = { isMenuOpen = false },
             modifier = Modifier.background(Color(0xFF262626))
         ) {
             DropdownMenuItem(
-                text = { Text("Gỡ cài đặt (Xóa ứng dụng)", color = Color(0xFFFF5252), fontSize = 13.sp) },
-                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFFF5252), modifier = Modifier.size(16.dp)) },
+                text = { Text("Di chuyển lên đầu danh sách", color = Color(0xFF60A5FA), fontSize = 13.sp) },
+                leadingIcon = { Icon(Icons.Default.North, contentDescription = null, tint = Color(0xFF60A5FA), modifier = Modifier.size(16.dp)) },
                 onClick = {
                     isMenuOpen = false
-                    onDelete()
-                }
-            )
-            DropdownMenuItem(
-                text = { Text("Ẩn ứng dụng khỏi màn hình", color = Color.White, fontSize = 13.sp) },
-                leadingIcon = { Icon(Icons.Default.VisibilityOff, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(16.dp)) },
-                onClick = {
-                    isMenuOpen = false
-                    onHide()
+                    onMoveToTop()
                 }
             )
             HorizontalDivider(color = Color.DarkGray)
@@ -461,6 +495,23 @@ private fun LaunchpadAppItem(
                 onClick = {
                     isMenuOpen = false
                     onPinToDockSlot(3)
+                }
+            )
+            HorizontalDivider(color = Color.DarkGray)
+            DropdownMenuItem(
+                text = { Text("Ẩn ứng dụng khỏi màn hình", color = Color.White, fontSize = 13.sp) },
+                leadingIcon = { Icon(Icons.Default.VisibilityOff, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(16.dp)) },
+                onClick = {
+                    isMenuOpen = false
+                    onHide()
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("Gỡ cài đặt (Xóa ứng dụng)", color = Color(0xFFFF5252), fontSize = 13.sp) },
+                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFFF5252), modifier = Modifier.size(16.dp)) },
+                onClick = {
+                    isMenuOpen = false
+                    onDelete()
                 }
             )
         }

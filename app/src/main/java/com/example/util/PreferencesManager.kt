@@ -20,6 +20,11 @@ class PreferencesManager(context: Context) {
         private const val KEY_DOCK_APP_1 = "dock_app_1"
         private const val KEY_DOCK_APP_2 = "dock_app_2"
         private const val KEY_DOCK_APP_3 = "dock_app_3"
+        private const val KEY_SWIPE_RIGHT_LAUNCHPAD = "swipe_right_launchpad"
+        private const val KEY_SWIPE_UP_LAUNCHPAD = "swipe_up_launchpad"
+        private const val KEY_SWIPE_DOWN_NOTIFICATIONS = "swipe_down_notifications"
+        private const val KEY_SHOW_LAUNCHPAD_GUIDE = "show_launchpad_guide"
+        private const val KEY_APP_ORDER = "app_order_list"
     }
 
     var showClock: Boolean
@@ -54,15 +59,34 @@ class PreferencesManager(context: Context) {
         get() = prefs.getStringSet(KEY_HIDDEN_PACKAGES, emptySet()) ?: emptySet()
         set(value) = prefs.edit().putStringSet(KEY_HIDDEN_PACKAGES, value).apply()
 
+    var swipeRightForLaunchpad: Boolean
+        get() = prefs.getBoolean(KEY_SWIPE_RIGHT_LAUNCHPAD, true)
+        set(value) = prefs.edit().putBoolean(KEY_SWIPE_RIGHT_LAUNCHPAD, value).apply()
+
+    var swipeUpForLaunchpad: Boolean
+        get() = prefs.getBoolean(KEY_SWIPE_UP_LAUNCHPAD, true)
+        set(value) = prefs.edit().putBoolean(KEY_SWIPE_UP_LAUNCHPAD, value).apply()
+
+    var swipeDownForNotifications: Boolean
+        get() = prefs.getBoolean(KEY_SWIPE_DOWN_NOTIFICATIONS, true)
+        set(value) = prefs.edit().putBoolean(KEY_SWIPE_DOWN_NOTIFICATIONS, value).apply()
+
+    var showLaunchpadGuide: Boolean
+        get() = prefs.getBoolean(KEY_SHOW_LAUNCHPAD_GUIDE, true)
+        set(value) = prefs.edit().putBoolean(KEY_SHOW_LAUNCHPAD_GUIDE, value).apply()
+
+    var appOrder: List<String>
+        get() {
+            val raw = prefs.getString(KEY_APP_ORDER, "") ?: ""
+            return if (raw.isBlank()) emptyList() else raw.split(",")
+        }
+        set(value) {
+            prefs.edit().putString(KEY_APP_ORDER, value.joinToString(",")).apply()
+        }
+
     fun hidePackage(pkg: String) {
         val current = hiddenPackages.toMutableSet()
         current.add(pkg)
-        hiddenPackages = current
-    }
-
-    fun unhidePackage(pkg: String) {
-        val current = hiddenPackages.toMutableSet()
-        current.remove(pkg)
         hiddenPackages = current
     }
 

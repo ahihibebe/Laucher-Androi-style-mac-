@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Gesture
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Wallpaper
@@ -58,7 +59,6 @@ fun DesktopContextMenuDialog(
                 .testTag("desktop_context_menu_dialog")
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -77,7 +77,19 @@ fun DesktopContextMenuDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Menu items
+                ContextMenuActionRow(
+                    icon = Icons.Default.Gesture,
+                    iconTint = Color(0xFF38BDF8),
+                    title = "Cài đặt Thao tác vuốt",
+                    subtitle = "Bật/tắt vuốt sang phải, vuốt lên, vuốt xuống",
+                    onClick = {
+                        onDismiss()
+                        viewModel.openSettingsDialog(SettingsCategory.GESTURES)
+                    }
+                )
+
+                HorizontalDivider(color = Color(0xFF333333), modifier = Modifier.padding(vertical = 4.dp))
+
                 ContextMenuActionRow(
                     icon = Icons.Default.AddPhotoAlternate,
                     iconTint = Color(0xFFF472B6),
@@ -105,23 +117,10 @@ fun DesktopContextMenuDialog(
                 HorizontalDivider(color = Color(0xFF333333), modifier = Modifier.padding(vertical = 4.dp))
 
                 ContextMenuActionRow(
-                    icon = Icons.Default.Settings,
-                    iconTint = Color(0xFFA78BFA),
-                    title = "Cài đặt Mac",
-                    subtitle = "Tùy biến toàn bộ hệ thống launcher",
-                    onClick = {
-                        onDismiss()
-                        viewModel.openSettingsDialog(SettingsCategory.GENERAL)
-                    }
-                )
-
-                HorizontalDivider(color = Color(0xFF333333), modifier = Modifier.padding(vertical = 4.dp))
-
-                ContextMenuActionRow(
                     icon = Icons.Default.TrendingUp,
                     iconTint = Color(0xFF34D399),
                     title = "Giá Cà phê & Vàng nhẫn",
-                    subtitle = "Cập nhật từ giacaphe.com",
+                    subtitle = "Cập nhật trực tiếp từ giacaphe.com",
                     onClick = {
                         onDismiss()
                         viewModel.openSettingsDialog(SettingsCategory.MARKET_PRICES)
@@ -131,13 +130,13 @@ fun DesktopContextMenuDialog(
                 HorizontalDivider(color = Color(0xFF333333), modifier = Modifier.padding(vertical = 4.dp))
 
                 ContextMenuActionRow(
-                    icon = Icons.Default.CalendarMonth,
-                    iconTint = Color(0xFFFFB74D),
-                    title = "Đồng hồ & Lịch âm",
-                    subtitle = "Bật tắt đồng hồ, lịch âm, can chi",
+                    icon = Icons.Default.Settings,
+                    iconTint = Color(0xFFA78BFA),
+                    title = "Cài đặt macOs đầy đủ",
+                    subtitle = "Tùy biến toàn bộ hệ thống launcher",
                     onClick = {
                         onDismiss()
-                        viewModel.openSettingsDialog(SettingsCategory.CLOCK_AND_LUNAR)
+                        viewModel.openSettingsDialog(SettingsCategory.GENERAL)
                     }
                 )
             }
