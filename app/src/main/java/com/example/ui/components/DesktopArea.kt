@@ -1,8 +1,5 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,16 +20,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -62,6 +57,7 @@ import com.example.viewmodel.SettingsCategory
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlin.math.abs
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -78,11 +74,11 @@ fun DesktopArea(
     showLaunchpadGuide: Boolean,
     swipeUpForLaunchpad: Boolean,
     swipeDownForNotifications: Boolean,
+    swipeRightForLaunchpad: Boolean,
     onNavigateToLaunchpad: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val scrollState = rememberScrollState()
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     val timeFormat = if (is24Hour) "HH:mm" else "hh:mm a"
@@ -92,28 +88,51 @@ fun DesktopArea(
     val formattedTime = remember(currentTime.timeInMillis, is24Hour) { timeFormatter.format(currentTime.time) }
     val formattedDate = remember(currentTime.timeInMillis) { fullDateFormatter.format(currentTime.time) }
 
-    var verticalDragAccumulator by remember { mutableFloatStateOf(0f) }
+    var accumulatedDragX by remember { mutableFloatStateOf(0f) }
+    var accumulatedDragY by remember { mutableFloatStateOf(0f) }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            // Detect swipe up (open launchpad) & swipe down (open notifications) gestures
-            .pointerInput(swipeUpForLaunchpad, swipeDownForNotifications) {
+            // Detect directional drag gestures:
+            // 1. Swipe UP -> All apps / Launchpad
+            // 2. Swipe DOWN -> Expand Notifications panel
+            // 3. Swipe RIGHT / LEFT -> Launchpad
+            .pointerInput(swipeUpForLaunchpad, swipeDownForNotifications, swipeRightForLaunchpad) {
                 detectDragGestures(
-                    onDragEnd = {
-                        if (swipeUpForLaunchpad && verticalDragAccumulator < -80f) {
-                            onNavigateToLaunchpad()
-                        } else if (swipeDownForNotifications && verticalDragAccumulator > 80f) {
-                            viewModel.expandNotifications(context)
-                        }
-                        verticalDragAccumulator = 0f
-                    },
-                    onDragCancel = {
-                        verticalDragAccumulator = 0f
+                    onDragStart = {
+                        accumulatedDragX = 0f
+                        accumulatedDragY = 0f
                     },
                     onDrag = { change, dragAmount ->
-                        change.consume()
-                        verticalDragAccumulator += dragAmount.y
+                        accumulatedDragX += dragAmount.x
+                        accumulatedDragY += dragAmount.y
+                    },
+                    onDragEnd = {
+                        val dx = accumulatedDragX
+                        val dy = accumulatedDragY
+                        val absX = abs(dx)
+                        val absY = abs(dy)
+
+                        if (absY > absX && absY > 45f) {
+                            // Vertical gestures
+                            if (dy < -45f && swipeUpForLaunchpad) {
+                                onNavigateToLaunchpad()
+                            } else if (dy > 45f && swipeDownForNotifications) {
+                                viewModel.expandNotifications(context)
+                            }
+                        } else if (absX > absY && absX > 45f) {
+                            // Horizontal gestures (swipe right or swipe left)
+                            if (swipeRightForLaunchpad) {
+                                onNavigateToLaunchpad()
+                            }
+                        }
+                        accumulatedDragX = 0f
+                        accumulatedDragY = 0f
+                    },
+                    onDragCancel = {
+                        accumulatedDragX = 0f
+                        accumulatedDragY = 0f
                     }
                 )
             }
@@ -128,11 +147,10 @@ fun DesktopArea(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(top = statusBarTop + 12.dp, start = 14.dp, end = 14.dp, bottom = 8.dp),
+                .padding(top = statusBarTop + 14.dp, start = 14.dp, end = 14.dp, bottom = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Symmetrical Cards: Left = Lịch Vạn Niên & Giờ; Right = Giá Cà Phê & Giá Vàng Nhẫn
+            // Symmetrical Cards: Left = Lịch Vạn Niên & Giờ; Right = Giá Cà Phê & Giá Vàng
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -142,11 +160,11 @@ fun DesktopArea(
                     Card(
                         shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = Color.Black.copy(alpha = 0.35f)
+                            containerColor = Color.Black.copy(alpha = 0.38f)
                         ),
                         modifier = Modifier
                             .weight(1f)
-                            .height(180.dp)
+                            .height(184.dp)
                             .border(
                                 1.dp,
                                 Brush.verticalGradient(
@@ -229,16 +247,16 @@ fun DesktopArea(
                     }
                 }
 
-                // Widget 2: Giá Cà Phê & Giá Vàng Nhẫn (Right symmetrical card)
+                // Widget 2: Giá Cà Phê & Giá Vàng (Right symmetrical card)
                 if (showMarketPrices) {
                     Card(
                         shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = Color.Black.copy(alpha = 0.35f)
+                            containerColor = Color.Black.copy(alpha = 0.38f)
                         ),
                         modifier = Modifier
                             .weight(1f)
-                            .height(180.dp)
+                            .height(184.dp)
                             .border(
                                 1.dp,
                                 Brush.verticalGradient(
@@ -246,7 +264,8 @@ fun DesktopArea(
                                 ),
                                 RoundedCornerShape(20.dp)
                             )
-                            .clickable { viewModel.openSettingsDialog(SettingsCategory.MARKET_PRICES) }
+                            // Click opens live online coffee prices popup dialog from giacaphe.com
+                            .clickable { viewModel.openCoffeeOnlineDialog() }
                             .testTag("market_prices_desktop_widget")
                     ) {
                         Column(
@@ -287,14 +306,27 @@ fun DesktopArea(
                                     )
                                 }
 
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = "Cập nhật",
-                                    tint = Color.White.copy(alpha = 0.6f),
-                                    modifier = Modifier
-                                        .size(15.dp)
-                                        .clickable { viewModel.fetchMarketPrices() }
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Language,
+                                        contentDescription = "Mở trực tuyến",
+                                        tint = Color(0xFF60A5FA),
+                                        modifier = Modifier
+                                            .size(14.dp)
+                                            .clickable { viewModel.openCoffeeOnlineDialog() }
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "Cập nhật",
+                                        tint = Color.White.copy(alpha = 0.6f),
+                                        modifier = Modifier
+                                            .size(15.dp)
+                                            .clickable { viewModel.fetchMarketPrices() }
+                                    )
+                                }
                             }
 
                             // Coffee price section (giacaphe.com)
@@ -311,37 +343,45 @@ fun DesktopArea(
                                     )
                                     Text(
                                         text = "giacaphe.com",
-                                        color = Color.White.copy(alpha = 0.5f),
+                                        color = Color(0xFF60A5FA),
                                         fontSize = 9.sp
                                     )
                                 }
                                 Text(
-                                    text = marketPrices?.averageCoffeePrice ?: "121.800 đ/kg",
+                                    text = marketPrices?.averageCoffeePrice ?: "89.400 đ/kg",
                                     color = Color(0xFFFBBF24),
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold
                                 )
+                                Text(
+                                    text = "Chạm để xem trực tuyến",
+                                    color = Color.White.copy(alpha = 0.5f),
+                                    fontSize = 8.5.sp
+                                )
                             }
 
-                            // Gold ring price section (Vàng nhẫn)
+                            // Gold price section (Giá Vàng)
                             Column {
                                 Text(
-                                    text = "🥇 Vàng Nhẫn 9999:",
+                                    text = "🥇 Giá Vàng:",
                                     color = Color(0xFFFEF08A),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Medium
                                 )
-                                val gold = marketPrices?.goldPrices?.firstOrNull()
+                                val sjcGold = marketPrices?.goldPrices?.find { it.brand.contains("SJC", true) }
+                                    ?: marketPrices?.goldPrices?.firstOrNull()
                                 Text(
-                                    text = "Bán: ${gold?.sellPrice ?: "89.200.000 đ"}",
+                                    text = "SJC: ${sjcGold?.sellPrice ?: "142.000.000 đ"}",
                                     color = Color(0xFF4ADE80),
-                                    fontSize = 12.sp,
+                                    fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Bold
                                 )
+                                val ringGold = marketPrices?.goldPrices?.find { it.brand.contains("Nhẫn", true) }
                                 Text(
-                                    text = "Cập nhật: ${marketPrices?.lastUpdated ?: formattedDate}",
-                                    color = Color.White.copy(alpha = 0.6f),
-                                    fontSize = 8.5.sp
+                                    text = "Nhẫn: ${ringGold?.sellPrice ?: "139.000.000 đ"}",
+                                    color = Color(0xFFFDE047),
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
                         }
@@ -420,8 +460,6 @@ fun DesktopArea(
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(100.dp))
         }
     }
 }

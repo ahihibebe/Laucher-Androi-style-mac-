@@ -10,11 +10,14 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,9 +45,8 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.North
-import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -58,16 +60,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
@@ -76,9 +83,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.example.model.AppInfo
 import com.example.viewmodel.LauncherViewModel
+import kotlin.math.abs
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LaunchpadScreen(
     viewModel: LauncherViewModel,
@@ -115,10 +125,18 @@ fun LaunchpadScreen(
         label = "rotation"
     )
 
+    var dragYTotal by remember { mutableFloatStateOf(0f) }
+
+    // Drag-and-drop reordering state
+    var draggedPackageName by remember { mutableStateOf<String?>(null) }
+    var draggedCurrentIndex by remember { mutableStateOf<Int?>(null) }
+    var draggingOffset by remember { mutableStateOf(Offset.Zero) }
+    val itemCenters = remember { mutableMapOf<Int, Offset>() }
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.65f))
+            .background(Color.Black.copy(alpha = 0.72f))
     ) {
         Column(
             modifier = Modifier
@@ -129,7 +147,20 @@ fun LaunchpadScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = { dragYTotal = 0f },
+                            onDrag = { _, dragAmount -> dragYTotal += dragAmount.y },
+                            onDragEnd = {
+                                if (dragYTotal > 60f) {
+                                    onNavigateBack()
+                                }
+                                dragYTotal = 0f
+                            },
+                            onDragCancel = { dragYTotal = 0f }
+                        )
+                    },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -155,7 +186,7 @@ fun LaunchpadScreen(
                 Surface(
                     shape = RoundedCornerShape(14.dp),
                     color = Color.White.copy(alpha = 0.18f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
                     modifier = Modifier.weight(1f)
                 ) {
                     Row(
@@ -265,7 +296,7 @@ fun LaunchpadScreen(
                 )
 
                 Text(
-                    text = if (isJiggleMode) "Nhấn giữ hoặc chạm để di chuyển, xóa, ẩn" else "${apps.size} ứng dụng",
+                    text = if (isJiggleMode) "Kéo thả để đổi vị trí • Nhấn X để xóa/ẩn" else "${apps.size} ứng dụng",
                     color = if (isJiggleMode) Color(0xFFF472B6) else Color.White.copy(alpha = 0.6f),
                     fontSize = 11.5.sp,
                     fontWeight = if (isJiggleMode) FontWeight.Medium else FontWeight.Normal
@@ -303,20 +334,79 @@ fun LaunchpadScreen(
                 ) {
                     itemsIndexed(
                         items = apps,
-                        key = { index, app -> "${app.packageName}_$index" }
+                        key = { _, app -> app.packageName }
                     ) { index, app ->
+                        val isDraggingThis = (app.packageName == draggedPackageName)
+
                         LaunchpadAppItem(
                             app = app,
+                            index = index,
                             isJiggleMode = isJiggleMode,
-                            rotationAngle = if (isJiggleMode) {
+                            isDraggingThis = isDraggingThis,
+                            draggingOffset = if (isDraggingThis) draggingOffset else Offset.Zero,
+                            rotationAngle = if (isJiggleMode && !isDraggingThis) {
                                 if (index % 2 == 0) rotationAngle else -rotationAngle
                             } else 0f,
                             onLaunch = { viewModel.launchApp(context, app) },
-                            onLongPress = {
+                            onStartDrag = {
+                                draggedPackageName = app.packageName
+                                draggedCurrentIndex = index
+                                draggingOffset = Offset.Zero
                                 viewModel.setJiggleMode(true)
+                                viewModel.triggerVibration()
                             },
-                            onMoveToTop = {
-                                viewModel.moveAppToTop(app)
+                            onDrag = { dragAmount ->
+                                draggingOffset += dragAmount
+
+                                val curIdx = draggedCurrentIndex
+                                if (curIdx != null && curIdx in apps.indices) {
+                                    val currentSlotCenter = itemCenters[curIdx]
+                                    if (currentSlotCenter != null) {
+                                        val floatingCenter = currentSlotCenter + draggingOffset
+
+                                        var closestIndex = curIdx
+                                        var minDistanceSq = Float.MAX_VALUE
+
+                                        itemCenters.forEach { (targetIdx, targetCenter) ->
+                                            if (targetIdx in apps.indices) {
+                                                val dx = floatingCenter.x - targetCenter.x
+                                                val dy = floatingCenter.y - targetCenter.y
+                                                val distSq = dx * dx + dy * dy
+                                                if (distSq < minDistanceSq) {
+                                                    minDistanceSq = distSq
+                                                    closestIndex = targetIdx
+                                                }
+                                            }
+                                        }
+
+                                        if (closestIndex != curIdx) {
+                                            val targetCenter = itemCenters[closestIndex]
+                                            if (targetCenter != null) {
+                                                val delta = targetCenter - currentSlotCenter
+                                                draggingOffset -= delta
+                                                viewModel.moveAppToIndex(curIdx, closestIndex)
+                                                draggedCurrentIndex = closestIndex
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            onDragEnd = {
+                                draggedPackageName = null
+                                draggedCurrentIndex = null
+                                draggingOffset = Offset.Zero
+                                viewModel.saveCurrentAppOrder()
+                            },
+                            onCancelDrag = {
+                                draggedPackageName = null
+                                draggedCurrentIndex = null
+                                draggingOffset = Offset.Zero
+                            },
+                            onPositioned = { center ->
+                                itemCenters[index] = center
+                            },
+                            onReorder = {
+                                viewModel.openReorderDialog(app)
                             },
                             onDelete = {
                                 viewModel.uninstallApp(context, app)
@@ -324,8 +414,10 @@ fun LaunchpadScreen(
                             onHide = {
                                 viewModel.hideApp(app)
                             },
-                            onPinToDockSlot = { slot ->
-                                viewModel.assignAppToDockSlot(slot, app)
+                            modifier = if (!isDraggingThis) {
+                                Modifier.animateItemPlacement()
+                            } else {
+                                Modifier
                             }
                         )
                     }
@@ -335,38 +427,78 @@ fun LaunchpadScreen(
     }
 }
 
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun LaunchpadAppItem(
     app: AppInfo,
+    index: Int,
     isJiggleMode: Boolean,
+    isDraggingThis: Boolean,
+    draggingOffset: Offset,
     rotationAngle: Float,
     onLaunch: () -> Unit,
-    onLongPress: () -> Unit,
-    onMoveToTop: () -> Unit,
+    onStartDrag: () -> Unit,
+    onDrag: (Offset) -> Unit,
+    onDragEnd: (didDragDistance: Boolean) -> Unit,
+    onCancelDrag: () -> Unit,
+    onPositioned: (Offset) -> Unit,
+    onReorder: () -> Unit,
     onDelete: () -> Unit,
     onHide: () -> Unit,
-    onPinToDockSlot: (Int) -> Unit
+    modifier: Modifier = Modifier
 ) {
     var isMenuOpen by remember { mutableStateOf(false) }
+    var totalDragDistance by remember { mutableFloatStateOf(0f) }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .rotate(rotationAngle)
-            .combinedClickable(
-                onClick = {
-                    if (isJiggleMode) {
-                        isMenuOpen = true
-                    } else {
-                        onLaunch()
-                    }
-                },
-                onLongClick = {
-                    onLongPress()
-                    isMenuOpen = true
+        modifier = modifier
+            .zIndex(if (isDraggingThis) 100f else 1f)
+            .graphicsLayer {
+                if (isDraggingThis) {
+                    translationX = draggingOffset.x
+                    translationY = draggingOffset.y
+                    scaleX = 1.15f
+                    scaleY = 1.15f
+                    shadowElevation = 32f
+                } else {
+                    rotationZ = rotationAngle
                 }
-            )
+            }
+            .onGloballyPositioned { coordinates ->
+                val pos = coordinates.positionInRoot()
+                val size = coordinates.size
+                onPositioned(Offset(pos.x + size.width / 2f, pos.y + size.height / 2f))
+            }
+            .pointerInput(app.packageName, isJiggleMode) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = {
+                        totalDragDistance = 0f
+                        onStartDrag()
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        totalDragDistance += (abs(dragAmount.x) + abs(dragAmount.y))
+                        onDrag(dragAmount)
+                    },
+                    onDragEnd = {
+                        val didMove = totalDragDistance > 15f
+                        onDragEnd(didMove)
+                        if (!didMove && !isJiggleMode) {
+                            isMenuOpen = true
+                        }
+                    },
+                    onDragCancel = {
+                        onCancelDrag()
+                    }
+                )
+            }
+            .clickable {
+                if (isJiggleMode) {
+                    isMenuOpen = true
+                } else {
+                    onLaunch()
+                }
+            }
             .padding(4.dp)
     ) {
         val backgroundModifier = if (app.iconBitmap != null) {
@@ -379,7 +511,7 @@ private fun LaunchpadAppItem(
             Surface(
                 shape = RoundedCornerShape(18.dp),
                 color = Color.White.copy(alpha = 0.22f),
-                shadowElevation = 8.dp,
+                shadowElevation = if (isDraggingThis) 16.dp else 8.dp,
                 modifier = Modifier
                     .size(62.dp)
                     .border(
@@ -421,7 +553,7 @@ private fun LaunchpadAppItem(
             if (isJiggleMode) {
                 Box(
                     modifier = Modifier
-                        .size(20.dp)
+                        .size(22.dp)
                         .clip(CircleShape)
                         .background(Color(0xFFEF4444))
                         .clickable { isMenuOpen = true },
@@ -450,51 +582,19 @@ private fun LaunchpadAppItem(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Dropdown Menu: Di chuyển, Ghim, Xóa, Ẩn
+        // Dropdown Menu: Sắp xếp (Di chuyển vị trí), Ẩn, Gỡ cài đặt
         DropdownMenu(
             expanded = isMenuOpen,
             onDismissRequest = { isMenuOpen = false },
             modifier = Modifier.background(Color(0xFF262626))
         ) {
+            // Sắp xếp / Di chuyển vị trí giữa các ứng dụng
             DropdownMenuItem(
-                text = { Text("Di chuyển lên đầu danh sách", color = Color(0xFF60A5FA), fontSize = 13.sp) },
-                leadingIcon = { Icon(Icons.Default.North, contentDescription = null, tint = Color(0xFF60A5FA), modifier = Modifier.size(16.dp)) },
+                text = { Text("Sắp xếp (Di chuyển vị trí)", color = Color(0xFF60A5FA), fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold) },
+                leadingIcon = { Icon(Icons.Default.SwapHoriz, contentDescription = null, tint = Color(0xFF60A5FA), modifier = Modifier.size(18.dp)) },
                 onClick = {
                     isMenuOpen = false
-                    onMoveToTop()
-                }
-            )
-            HorizontalDivider(color = Color.DarkGray)
-            DropdownMenuItem(
-                text = { Text("Di chuyển vào thanh Dock ô 1", color = Color.White, fontSize = 13.sp) },
-                leadingIcon = { Icon(Icons.Default.PushPin, contentDescription = null, tint = Color(0xFF007AFF), modifier = Modifier.size(16.dp)) },
-                onClick = {
-                    isMenuOpen = false
-                    onPinToDockSlot(0)
-                }
-            )
-            DropdownMenuItem(
-                text = { Text("Di chuyển vào thanh Dock ô 2", color = Color.White, fontSize = 13.sp) },
-                leadingIcon = { Icon(Icons.Default.PushPin, contentDescription = null, tint = Color(0xFF007AFF), modifier = Modifier.size(16.dp)) },
-                onClick = {
-                    isMenuOpen = false
-                    onPinToDockSlot(1)
-                }
-            )
-            DropdownMenuItem(
-                text = { Text("Di chuyển vào thanh Dock ô 3", color = Color.White, fontSize = 13.sp) },
-                leadingIcon = { Icon(Icons.Default.PushPin, contentDescription = null, tint = Color(0xFF007AFF), modifier = Modifier.size(16.dp)) },
-                onClick = {
-                    isMenuOpen = false
-                    onPinToDockSlot(2)
-                }
-            )
-            DropdownMenuItem(
-                text = { Text("Di chuyển vào thanh Dock ô 4", color = Color.White, fontSize = 13.sp) },
-                leadingIcon = { Icon(Icons.Default.PushPin, contentDescription = null, tint = Color(0xFF007AFF), modifier = Modifier.size(16.dp)) },
-                onClick = {
-                    isMenuOpen = false
-                    onPinToDockSlot(3)
+                    onReorder()
                 }
             )
             HorizontalDivider(color = Color.DarkGray)

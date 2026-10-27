@@ -138,6 +138,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _dockApps = MutableStateFlow<List<AppInfo>>(emptyList())
     val dockApps: StateFlow<List<AppInfo>> = _dockApps.asStateFlow()
 
+    // Navigation & Overlay states
+    private val _isLaunchpadOpen = MutableStateFlow(false)
+    val isLaunchpadOpen: StateFlow<Boolean> = _isLaunchpadOpen.asStateFlow()
+
+    private val _isCoffeeOnlineDialogOpen = MutableStateFlow(false)
+    val isCoffeeOnlineDialogOpen: StateFlow<Boolean> = _isCoffeeOnlineDialogOpen.asStateFlow()
+
+    private val _reorderTargetApp = MutableStateFlow<AppInfo?>(null)
+    val reorderTargetApp: StateFlow<AppInfo?> = _reorderTargetApp.asStateFlow()
+
     // Jiggle Mode
     private val _isJiggleMode = MutableStateFlow(false)
     val isJiggleMode: StateFlow<Boolean> = _isJiggleMode.asStateFlow()
@@ -182,6 +192,77 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             } catch (e: Exception) {
                 // Ignore
             }
+        }
+    }
+
+    fun openCoffeeOnlineDialog() {
+        _isCoffeeOnlineDialogOpen.value = true
+    }
+
+    fun closeCoffeeOnlineDialog() {
+        _isCoffeeOnlineDialogOpen.value = false
+    }
+
+    fun openLaunchpad() {
+        _isLaunchpadOpen.value = true
+    }
+
+    fun closeLaunchpad() {
+        _isLaunchpadOpen.value = false
+        _isJiggleMode.value = false
+    }
+
+    fun openReorderDialog(app: AppInfo) {
+        triggerVibration()
+        _reorderTargetApp.value = app
+    }
+
+    fun closeReorderDialog() {
+        _reorderTargetApp.value = null
+    }
+
+    fun moveAppStep(app: AppInfo, step: Int) {
+        val currentVisible = filteredApps.value.map { it.packageName }.toMutableList()
+        val index = currentVisible.indexOf(app.packageName)
+        if (index != -1) {
+            val targetIndex = (index + step).coerceIn(0, currentVisible.size - 1)
+            if (targetIndex != index) {
+                currentVisible.removeAt(index)
+                currentVisible.add(targetIndex, app.packageName)
+                _customAppOrder.value = currentVisible
+                prefs.appOrder = currentVisible
+                triggerVibration()
+            }
+        }
+    }
+
+    fun moveAppToIndex(fromIndex: Int, toIndex: Int) {
+        val currentVisible = filteredApps.value.map { it.packageName }.toMutableList()
+        if (fromIndex in currentVisible.indices && toIndex in currentVisible.indices && fromIndex != toIndex) {
+            val item = currentVisible.removeAt(fromIndex)
+            currentVisible.add(toIndex, item)
+            _customAppOrder.value = currentVisible
+            prefs.appOrder = currentVisible
+            triggerVibration()
+        }
+    }
+
+    fun saveCurrentAppOrder() {
+        val currentVisible = filteredApps.value.map { it.packageName }
+        _customAppOrder.value = currentVisible
+        prefs.appOrder = currentVisible
+    }
+
+    fun swapAppPositions(app1: AppInfo, app2: AppInfo) {
+        val currentVisible = filteredApps.value.map { it.packageName }.toMutableList()
+        val index1 = currentVisible.indexOf(app1.packageName)
+        val index2 = currentVisible.indexOf(app2.packageName)
+        if (index1 != -1 && index2 != -1 && index1 != index2) {
+            currentVisible[index1] = app2.packageName
+            currentVisible[index2] = app1.packageName
+            _customAppOrder.value = currentVisible
+            prefs.appOrder = currentVisible
+            triggerVibration()
         }
     }
 
@@ -289,18 +370,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _isJiggleMode.value = active
     }
 
-    fun moveAppToTop(app: AppInfo) {
-        val currentOrder = _customAppOrder.value.toMutableList()
-        currentOrder.remove(app.packageName)
-        currentOrder.add(0, app.packageName)
-        _customAppOrder.value = currentOrder
-        prefs.appOrder = currentOrder
-        triggerVibration()
-    }
-
     fun hideApp(app: AppInfo) {
         prefs.hidePackage(app.packageName)
         _hiddenPackages.value = prefs.hiddenPackages
+        triggerVibration()
     }
 
     fun unhideAllApps() {
@@ -363,20 +436,32 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     @SuppressLint("WrongConstant")
     fun expandNotifications(context: Context) {
+        triggerVibration()
         try {
             val statusBarService = context.getSystemService("statusbar")
             val statusBarManager = Class.forName("android.app.StatusBarManager")
-            val expand = statusBarManager.getMethod("expandNotificationsPanel")
-            expand.invoke(statusBarService)
-        } catch (e: Exception) {
-            try {
-                val statusBarService = context.getSystemService("statusbar")
-                val statusBarManager = Class.forName("android.app.StatusBarManager")
-                val expand = statusBarManager.getMethod("expand")
-                expand.invoke(statusBarService)
-            } catch (e2: Exception) {
-                // Ignore
+            val method = try {
+                statusBarManager.getMethod("expandNotificationsPanel")
+            } catch (e: NoSuchMethodException) {
+                statusBarManager.getMethod("expand")
             }
+            method.invoke(statusBarService)
+            return
+        } catch (e: Exception) {
+            // Try alternative via ServiceManager
+        }
+
+        try {
+            val serviceManager = Class.forName("android.os.ServiceManager")
+            val getService = serviceManager.getMethod("getService", String::class.java)
+            val statusBarBinder = getService.invoke(null, "statusbar")
+            val asInterface = Class.forName("com.android.internal.statusbar.IStatusBarService\$Stub")
+                .getMethod("asInterface", android.os.IBinder::class.java)
+            val iStatusBar = asInterface.invoke(null, statusBarBinder)
+            val method = iStatusBar.javaClass.getMethod("expandNotificationsPanel")
+            method.invoke(iStatusBar)
+        } catch (e2: Exception) {
+            // Log/ignored
         }
     }
 

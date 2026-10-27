@@ -10,31 +10,35 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import coil.compose.rememberAsyncImagePainter
 import com.example.ui.components.AboutDialog
+import com.example.ui.components.CoffeeOnlineDialog
 import com.example.ui.components.DesktopArea
 import com.example.ui.components.DesktopContextMenuDialog
 import com.example.ui.components.DockAppPickerDialog
 import com.example.ui.components.LaunchpadScreen
 import com.example.ui.components.MacDock
 import com.example.ui.components.MacSettingsDialog
+import com.example.ui.components.ReorderAppDialog
 import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.LauncherViewModel
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -53,9 +57,6 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MacOsLauncherApp(viewModel: LauncherViewModel) {
-    val coroutineScope = rememberCoroutineScope()
-    val pagerState = rememberPagerState(pageCount = { 2 })
-
     // View model states
     val currentTime by viewModel.currentTime.collectAsState()
     val currentLunarDate by viewModel.currentLunarDate.collectAsState()
@@ -78,6 +79,11 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
     val swipeDownForNotifications by viewModel.swipeDownForNotifications.collectAsState()
     val showLaunchpadGuide by viewModel.showLaunchpadGuide.collectAsState()
 
+    // Navigation state
+    val isLaunchpadOpen by viewModel.isLaunchpadOpen.collectAsState()
+    val isCoffeeOnlineDialogOpen by viewModel.isCoffeeOnlineDialogOpen.collectAsState()
+    val reorderTargetApp by viewModel.reorderTargetApp.collectAsState()
+
     // Dialog & overlay states
     val isSettingsOpen by viewModel.isSettingsOpen.collectAsState()
     val selectedCategory by viewModel.selectedSettingsCategory.collectAsState()
@@ -96,17 +102,22 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
     }
 
     // Handle back button on sub-screens
-    BackHandler(enabled = pagerState.currentPage == 1 || isSettingsOpen || isDesktopContextMenuOpen || isJiggleMode) {
-        if (isJiggleMode) {
+    BackHandler(
+        enabled = isLaunchpadOpen || isSettingsOpen || isDesktopContextMenuOpen ||
+                isJiggleMode || isCoffeeOnlineDialogOpen || reorderTargetApp != null
+    ) {
+        if (reorderTargetApp != null) {
+            viewModel.closeReorderDialog()
+        } else if (isCoffeeOnlineDialogOpen) {
+            viewModel.closeCoffeeOnlineDialog()
+        } else if (isJiggleMode) {
             viewModel.setJiggleMode(false)
         } else if (isDesktopContextMenuOpen) {
             viewModel.closeDesktopContextMenu()
         } else if (isSettingsOpen) {
             viewModel.closeSettingsDialog()
-        } else if (pagerState.currentPage == 1) {
-            coroutineScope.launch {
-                pagerState.animateScrollToPage(0)
-            }
+        } else if (isLaunchpadOpen) {
+            viewModel.closeLaunchpad()
         }
     }
 
@@ -127,63 +138,78 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
             )
         }
 
-        // Horizontal Pager: Page 0 = Desktop; Page 1 = Launchpad
-        // userScrollEnabled is governed by swipeRightForLaunchpad toggle!
-        HorizontalPager(
-            state = pagerState,
-            userScrollEnabled = swipeRightForLaunchpad,
-            modifier = Modifier
-                .fillMaxSize()
-                .testTag("launcher_horizontal_pager")
-        ) { page ->
-            when (page) {
-                0 -> {
-                    // Desktop Screen (Top Menu Bar and Control Center removed as requested)
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        DesktopArea(
-                            viewModel = viewModel,
-                            currentTime = currentTime,
-                            lunarDate = currentLunarDate,
-                            showClock = showClock,
-                            showLunar = showLunar,
-                            showMarketPrices = showMarketPrices,
-                            marketPrices = marketPrices,
-                            is24Hour = is24Hour,
-                            showCanChi = showCanChi,
-                            showLaunchpadGuide = showLaunchpadGuide,
-                            swipeUpForLaunchpad = swipeUpForLaunchpad,
-                            swipeDownForNotifications = swipeDownForNotifications,
-                            onNavigateToLaunchpad = {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(1)
-                                }
-                            },
-                            modifier = Modifier.fillMaxSize()
-                        )
-
-                        // Bottom macOS Dock (4 apps without dots)
-                        MacDock(
-                            viewModel = viewModel,
-                            dockApps = dockApps,
-                            modifier = Modifier.align(Alignment.BottomCenter)
-                        )
-                    }
+        // Screen transition: Desktop <-> Launchpad
+        AnimatedContent(
+            targetState = isLaunchpadOpen,
+            transitionSpec = {
+                if (targetState) {
+                    (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
+                        slideOutHorizontally { width -> -width / 3 } + fadeOut()
+                    )
+                } else {
+                    (slideInHorizontally { width -> -width / 3 } + fadeIn()).togetherWith(
+                        slideOutHorizontally { width -> width } + fadeOut()
+                    )
                 }
-
-                1 -> {
-                    // Launchpad / All Applications Screen
-                    LaunchpadScreen(
+            },
+            label = "screen_transition",
+            modifier = Modifier.fillMaxSize()
+        ) { open ->
+            if (open) {
+                // Launchpad / All Applications Screen
+                LaunchpadScreen(
+                    viewModel = viewModel,
+                    apps = filteredApps,
+                    searchQuery = searchQuery,
+                    onNavigateBack = { viewModel.closeLaunchpad() }
+                )
+            } else {
+                // Desktop Screen (Top Menu Bar and Control Center removed as requested)
+                Box(modifier = Modifier.fillMaxSize()) {
+                    DesktopArea(
                         viewModel = viewModel,
-                        apps = filteredApps,
-                        searchQuery = searchQuery,
-                        onNavigateBack = {
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(0)
-                            }
-                        }
+                        currentTime = currentTime,
+                        lunarDate = currentLunarDate,
+                        showClock = showClock,
+                        showLunar = showLunar,
+                        showMarketPrices = showMarketPrices,
+                        marketPrices = marketPrices,
+                        is24Hour = is24Hour,
+                        showCanChi = showCanChi,
+                        showLaunchpadGuide = showLaunchpadGuide,
+                        swipeUpForLaunchpad = swipeUpForLaunchpad,
+                        swipeDownForNotifications = swipeDownForNotifications,
+                        swipeRightForLaunchpad = swipeRightForLaunchpad,
+                        onNavigateToLaunchpad = { viewModel.openLaunchpad() },
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+                    // Bottom macOS Dock (4 apps without dots)
+                    MacDock(
+                        viewModel = viewModel,
+                        dockApps = dockApps,
+                        modifier = Modifier.align(Alignment.BottomCenter)
                     )
                 }
             }
+        }
+
+        // Live Coffee Online Dialog (giacaphe.com/gia-ca-phe-truc-tuyen/)
+        if (isCoffeeOnlineDialogOpen) {
+            CoffeeOnlineDialog(
+                onDismiss = { viewModel.closeCoffeeOnlineDialog() }
+            )
+        }
+
+        // Reorder App Dialog
+        if (reorderTargetApp != null) {
+            ReorderAppDialog(
+                targetApp = reorderTargetApp!!,
+                allApps = filteredApps,
+                onMoveStep = { step -> viewModel.moveAppStep(reorderTargetApp!!, step) },
+                onSwapWith = { otherApp -> viewModel.swapAppPositions(reorderTargetApp!!, otherApp) },
+                onDismiss = { viewModel.closeReorderDialog() }
+            )
         }
 
         // macOS System Settings Window Modal

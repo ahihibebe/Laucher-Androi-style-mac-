@@ -36,15 +36,15 @@
 - Mở danh sách ứng dụng toàn màn hình theo dạng lưới phân trang mượt mà như macOS Launchpad.
 - **Tìm kiếm thông minh:** Thanh tìm kiếm ứng dụng tức thì kèm nút **Tìm kiếm bằng giọng nói (Microphone)** tiện lợi.
 - **Rung phản hồi (Haptic Feedback) & Menu thao tác khi nhấn giữ icon:**
-  - 🔄 **Di chuyển ứng dụng:** Thay đổi thứ tự vị trí hiển thị ứng dụng trong lưới.
+  - 🔄 **Sắp xếp vị trí:** Di chuyển vị trí giữa các ứng dụng trong Launchpad (Dời tiến/lùi hoặc hoán đổi với ứng dụng khác).
   - 🗑️ **Gỡ cài đặt (Xóa):** Mở hộp thoại gỡ cài đặt hệ thống nhanh chóng.
   - 👁️ **Ẩn ứng dụng:** Ẩn các ứng dụng riêng tư khỏi danh sách.
-  - ℹ️ **Thông tin ứng dụng:** Truy cập trang cài đặt hệ thống của ứng dụng.
 
-### 4. 📈 Widget Giá Cà Phê & Giá Vàng Nhẫn Thời Gian Thực
+### 4. 📈 Widget Giá Cà Phê & Giá Vàng Thời Gian Thực
 - **Nằm đối xứng với đồng hồ và lịch âm** trên màn hình chính:
-  - ☕ **Giá Cà Phê Tây Nguyên:** Cập nhật liên tục từ *giacaphe.com* theo ngày giờ hiện tại cho các tỉnh: **Đắk Lắk, Lâm Đồng, Gia Lai, Đắk Nông**.
-  - 🪙 **Giá Vàng Nhẫn 24K (9999):** Cập nhật giá mua vào / bán ra từ các thương hiệu lớn: **SJC, DOJI, PNJ, Bảo Tín Minh Châu**.
+  - ☕ **Giá Cà Phê Nội Địa:** Lấy dữ liệu trực tiếp từ liên kết *https://giacaphe.com/gia-ca-phe-noi-dia/* cho các tỉnh: **Đắk Lắk, Lâm Đồng, Gia Lai, Đắk Nông**.
+  - 🌐 **Hộp thoại xem Giá Cà Trực Tuyến:** Chạm vào widget để mở hộp thoại hiển thị trực tiếp trang *https://giacaphe.com/gia-ca-phe-truc-tuyen/* với biểu đồ và bảng giá chi tiết.
+  - 🪙 **Giá Vàng:** Cập nhật giá mua vào / bán ra chuẩn thị trường: **Vàng miếng SJC, Vàng Nhẫn 9999 SJC, DOJI, PNJ**.
   - 🔄 Nút làm mới dữ liệu nhanh (Refresh) và tự động cập nhật.
   - ⚙️ Tùy chọn bật/tắt hiển thị trong Cài đặt hệ thống.
 

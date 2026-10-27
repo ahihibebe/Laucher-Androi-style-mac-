@@ -539,12 +539,23 @@ private fun MarketPricesSettingsPane(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Giá Cà phê & Vàng", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                Text("Dữ liệu trực tiếp từ trang giacaphe.com", color = Color.Gray, fontSize = 11.sp)
+                Text("Giá Cà phê & Giá Vàng", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text("Nguồn giá: https://giacaphe.com/gia-ca-phe-noi-dia/", color = Color.Gray, fontSize = 11.sp)
             }
 
-            IconButton(onClick = { viewModel.fetchMarketPrices() }) {
-                Icon(Icons.Default.Refresh, contentDescription = "Tải lại", tint = Color(0xFF34D399))
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Button(
+                    onClick = { viewModel.openCoffeeOnlineDialog() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text("Xem trực tuyến", color = Color.White, fontSize = 11.sp)
+                }
+
+                IconButton(onClick = { viewModel.fetchMarketPrices() }) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Tải lại", tint = Color(0xFF34D399))
+                }
             }
         }
 
