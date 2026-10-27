@@ -29,6 +29,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import coil.compose.rememberAsyncImagePainter
 import com.example.ui.components.AboutDialog
+import com.example.ui.components.BankQrZoomDialog
 import com.example.ui.components.CoffeeOnlineDialog
 import com.example.ui.components.DesktopArea
 import com.example.ui.components.DesktopContextMenuDialog
@@ -87,6 +88,8 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
     val isFullCalendarDialogOpen by viewModel.isFullCalendarDialogOpen.collectAsState()
     val isGoldPriceDialogOpen by viewModel.isGoldPriceDialogOpen.collectAsState()
     val reorderTargetApp by viewModel.reorderTargetApp.collectAsState()
+    val isBankQrZoomOpen by viewModel.isBankQrZoomOpen.collectAsState()
+    val bankQrUri by viewModel.bankQrUri.collectAsState()
 
     // Dialog & overlay states
     val isSettingsOpen by viewModel.isSettingsOpen.collectAsState()
@@ -105,13 +108,23 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
         }
     }
 
+    val bankQrPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            viewModel.setBankQrUri(uri.toString())
+        }
+    }
+
     // Handle back button on sub-screens
     BackHandler(
         enabled = isLaunchpadOpen || isSettingsOpen || isDesktopContextMenuOpen ||
                 isJiggleMode || isCoffeeOnlineDialogOpen || isFullCalendarDialogOpen ||
-                isGoldPriceDialogOpen || reorderTargetApp != null
+                isGoldPriceDialogOpen || isBankQrZoomOpen || reorderTargetApp != null
     ) {
-        if (reorderTargetApp != null) {
+        if (isBankQrZoomOpen) {
+            viewModel.closeBankQrZoom()
+        } else if (reorderTargetApp != null) {
             viewModel.closeReorderDialog()
         } else if (isFullCalendarDialogOpen) {
             viewModel.closeFullCalendarDialog()
@@ -190,6 +203,9 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
                         swipeDownForNotifications = swipeDownForNotifications,
                         swipeRightForLaunchpad = swipeRightForLaunchpad,
                         onNavigateToLaunchpad = { viewModel.openLaunchpad() },
+                        onPickBankQr = {
+                            bankQrPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        },
                         modifier = Modifier.fillMaxSize()
                     )
 
@@ -201,6 +217,20 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
                     )
                 }
             }
+        }
+
+        // Bank QR Zoom Dialog (Hiển thị toàn màn hình để quét chuyển khoản)
+        if (isBankQrZoomOpen && bankQrUri != null) {
+            BankQrZoomDialog(
+                qrUri = bankQrUri!!,
+                onPickNewQr = {
+                    bankQrPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+                onDeleteQr = {
+                    viewModel.setBankQrUri(null)
+                },
+                onDismiss = { viewModel.closeBankQrZoom() }
+            )
         }
 
         // Live Coffee Online Dialog (giacaphe.com/gia-ca-phe-truc-tuyen/)

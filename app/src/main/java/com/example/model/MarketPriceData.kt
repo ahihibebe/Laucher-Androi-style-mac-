@@ -30,5 +30,6 @@ data class MarketPriceReport(
     val lamDongDistricts: List<CoffeePrice>,
     val goldPrices: List<GoldPrice>,
     val petrolPrices: List<PetrolPrice>,
+    val oilPrices: List<PetrolPrice> = emptyList(),
     val lastUpdated: String
 )

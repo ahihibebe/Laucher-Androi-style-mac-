@@ -25,7 +25,12 @@ class PreferencesManager(context: Context) {
         private const val KEY_SWIPE_DOWN_NOTIFICATIONS = "swipe_down_notifications"
         private const val KEY_SHOW_LAUNCHPAD_GUIDE = "show_launchpad_guide"
         private const val KEY_APP_ORDER = "app_order_list"
+        private const val KEY_BANK_QR_URI = "bank_qr_uri"
     }
+
+    var bankQrUri: String?
+        get() = prefs.getString(KEY_BANK_QR_URI, null)
+        set(value) = prefs.edit().putString(KEY_BANK_QR_URI, value).apply()
 
     var showClock: Boolean
         get() = prefs.getBoolean(KEY_SHOW_CLOCK, true)

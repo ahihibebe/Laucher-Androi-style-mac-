@@ -52,6 +52,15 @@ enum class SettingsCategory(val title: String) {
     ABOUT("Giới thiệu")
 }
 
+data class LauncherMusicTrack(
+    val title: String,
+    val artist: String,
+    val durationText: String,
+    val totalSeconds: Int = 240,
+    val coverGradientStart: Long = 0xFF8B5CF6,
+    val coverGradientEnd: Long = 0xFFEC4899
+)
+
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefs = PreferencesManager(application)
@@ -174,6 +183,31 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _dockSlotPicker = MutableStateFlow<Int?>(null)
     val dockSlotPicker: StateFlow<Int?> = _dockSlotPicker.asStateFlow()
 
+    // Bank QR Code state (Ô 1: Chọn ảnh QR ngân hàng từ bộ nhớ máy)
+    private val _bankQrUri = MutableStateFlow(prefs.bankQrUri)
+    val bankQrUri: StateFlow<String?> = _bankQrUri.asStateFlow()
+
+    private val _isBankQrZoomOpen = MutableStateFlow(false)
+    val isBankQrZoomOpen: StateFlow<Boolean> = _isBankQrZoomOpen.asStateFlow()
+
+    // Trình phát nhạc macOS (Ô 3: Music player widget)
+    val musicPlaylist = listOf(
+        LauncherMusicTrack("Diễm Xưa", "Trịnh Công Sơn", "04:15", 255, 0xFFE11D48, 0xFFFB7185),
+        LauncherMusicTrack("Hạ Trắng", "Trịnh Công Sơn", "04:42", 282, 0xFF8B5CF6, 0xFFC084FC),
+        LauncherMusicTrack("Nắng Thủy Tinh", "Trịnh Công Sơn", "03:58", 238, 0xFFF59E0B, 0xFFFDE047),
+        LauncherMusicTrack("Biển Nhớ", "Trịnh Công Sơn", "04:20", 260, 0xFF0D9488, 0xFF2DD4BF),
+        LauncherMusicTrack("macOS Lo-Fi Chill", "Apple Acoustic", "03:30", 210, 0xFF3B82F6, 0xFF60A5FA)
+    )
+
+    private val _isMusicPlaying = MutableStateFlow(false)
+    val isMusicPlaying: StateFlow<Boolean> = _isMusicPlaying.asStateFlow()
+
+    private val _currentTrackIndex = MutableStateFlow(0)
+    val currentTrackIndex: StateFlow<Int> = _currentTrackIndex.asStateFlow()
+
+    private val _musicProgressSeconds = MutableStateFlow(45)
+    val musicProgressSeconds: StateFlow<Int> = _musicProgressSeconds.asStateFlow()
+
     init {
         loadInstalledApps()
         startClockTicker()
@@ -185,6 +219,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             while (true) {
                 _currentTime.value = Calendar.getInstance()
                 _currentLunarDate.value = LunarCalendarHelper.getTodayLunarDate()
+
+                if (_isMusicPlaying.value) {
+                    val currentTrack = musicPlaylist.getOrNull(_currentTrackIndex.value)
+                    val totalSec = currentTrack?.totalSeconds ?: 240
+                    if (_musicProgressSeconds.value >= totalSec) {
+                        _currentTrackIndex.value = (_currentTrackIndex.value + 1) % musicPlaylist.size
+                        _musicProgressSeconds.value = 0
+                    } else {
+                        _musicProgressSeconds.value += 1
+                    }
+                }
+
                 delay(1000)
             }
         }
@@ -223,6 +269,44 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun closeGoldPriceDialog() {
         _isGoldPriceDialogOpen.value = false
+    }
+
+    // Bank QR controls
+    fun setBankQrUri(uri: String?) {
+        _bankQrUri.value = uri
+        prefs.bankQrUri = uri
+        triggerVibration()
+    }
+
+    fun openBankQrZoom() {
+        if (_bankQrUri.value != null) {
+            _isBankQrZoomOpen.value = true
+            triggerVibration()
+        }
+    }
+
+    fun closeBankQrZoom() {
+        _isBankQrZoomOpen.value = false
+    }
+
+    // Music Player controls
+    fun toggleMusicPlayPause() {
+        _isMusicPlaying.value = !_isMusicPlaying.value
+        triggerVibration()
+    }
+
+    fun nextMusicTrack() {
+        _currentTrackIndex.value = (_currentTrackIndex.value + 1) % musicPlaylist.size
+        _musicProgressSeconds.value = 0
+        _isMusicPlaying.value = true
+        triggerVibration()
+    }
+
+    fun prevMusicTrack() {
+        _currentTrackIndex.value = if (_currentTrackIndex.value > 0) _currentTrackIndex.value - 1 else musicPlaylist.size - 1
+        _musicProgressSeconds.value = 0
+        _isMusicPlaying.value = true
+        triggerVibration()
     }
 
     fun openLaunchpad() {

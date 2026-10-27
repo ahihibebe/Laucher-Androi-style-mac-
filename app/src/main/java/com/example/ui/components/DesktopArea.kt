@@ -56,6 +56,21 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.rememberAsyncImagePainter
 import com.example.model.LunarDate
 import com.example.model.MarketPriceReport
 import com.example.viewmodel.LauncherViewModel
@@ -82,6 +97,7 @@ fun DesktopArea(
     swipeDownForNotifications: Boolean,
     swipeRightForLaunchpad: Boolean,
     onNavigateToLaunchpad: () -> Unit,
+    onPickBankQr: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -157,14 +173,21 @@ fun DesktopArea(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             val pagerScope = rememberCoroutineScope()
-            val marketPagerState = rememberPagerState(pageCount = { 2 })
+            val leftPagerState = rememberPagerState(initialPage = 1, pageCount = { 3 })
+            val marketPagerState = rememberPagerState(pageCount = { 3 })
 
-            // Symmetrical Cards: Left = Lịch Vạn Niên & Giờ; Right = Giá Cà Phê, Giá Vàng & Xăng Dầu
+            val bankQrUri by viewModel.bankQrUri.collectAsState()
+            val isMusicPlaying by viewModel.isMusicPlaying.collectAsState()
+            val currentTrackIndex by viewModel.currentTrackIndex.collectAsState()
+            val musicProgressSeconds by viewModel.musicProgressSeconds.collectAsState()
+            val currentTrack = viewModel.musicPlaylist.getOrNull(currentTrackIndex) ?: viewModel.musicPlaylist[0]
+
+            // Symmetrical Cards: Left = QR / Lịch Vạn Niên / Trình Phát Nhạc; Right = Cà phê & Vàng / Giá Xăng / Giá Dầu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Widget 1: Lịch vạn niên & Giờ (Left symmetrical card) - Bấm vào xem đầy đủ lịch
+                // Widget 1: Left Card (3 pages: 0 = QR Ngân Hàng, 1 = Lịch Vạn Niên, 2 = Trình Phát Nhạc)
                 if (showClock || showLunar) {
                     Card(
                         shape = RoundedCornerShape(20.dp),
@@ -181,16 +204,15 @@ fun DesktopArea(
                                 ),
                                 RoundedCornerShape(20.dp)
                             )
-                            .clickable { viewModel.openFullCalendarDialog() }
                             .testTag("clock_lunar_desktop_widget")
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(12.dp),
+                                .padding(10.dp),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            // Header
+                            // Top Bar inside Left Card: Title + Page Indicator (3 dots)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -198,91 +220,428 @@ fun DesktopArea(
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.clickable {
+                                        pagerScope.launch {
+                                            val next = (leftPagerState.currentPage + 1) % 3
+                                            leftPagerState.animateScrollToPage(next)
+                                        }
+                                    }
                                 ) {
+                                    val headerIcon = when (leftPagerState.currentPage) {
+                                        0 -> Icons.Default.QrCode2
+                                        2 -> Icons.Default.MusicNote
+                                        else -> Icons.Default.CalendarMonth
+                                    }
+                                    val headerTint = when (leftPagerState.currentPage) {
+                                        0 -> Color(0xFF38BDF8)
+                                        2 -> Color(0xFFF43F5E)
+                                        else -> Color(0xFFFFB74D)
+                                    }
+                                    val headerTitle = when (leftPagerState.currentPage) {
+                                        0 -> "QR NGÂN HÀNG"
+                                        2 -> "TRÌNH PHÁT NHẠC"
+                                        else -> "LỊCH VẠN NIÊN"
+                                    }
+
                                     Box(
                                         modifier = Modifier
-                                            .size(20.dp)
+                                            .size(18.dp)
                                             .clip(CircleShape)
-                                            .background(Color(0xFFFFB74D).copy(alpha = 0.25f)),
+                                            .background(headerTint.copy(alpha = 0.25f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.CalendarMonth,
+                                            imageVector = headerIcon,
                                             contentDescription = null,
-                                            tint = Color(0xFFFFB74D),
-                                            modifier = Modifier.size(13.dp)
+                                            tint = headerTint,
+                                            modifier = Modifier.size(12.dp)
                                         )
                                     }
-                                    Text(
-                                        text = "LỊCH VẠN NIÊN",
-                                        color = Color.White.copy(alpha = 0.85f),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
 
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = Color.White.copy(alpha = 0.12f),
-                                    modifier = Modifier.clickable { viewModel.openFullCalendarDialog() }
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
-                                        Text("Xem đầy đủ", color = Color(0xFFFBBF24), fontSize = 8.5.sp, fontWeight = FontWeight.SemiBold)
-                                        Icon(Icons.Default.OpenInNew, contentDescription = null, tint = Color(0xFFFBBF24), modifier = Modifier.size(9.dp))
-                                    }
-                                }
-                            }
-
-                            // Center: Clock
-                            if (showClock) {
-                                Column {
-                                    Text(
-                                        text = formattedTime,
-                                        color = Color.White,
-                                        fontSize = 27.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = formattedDate,
-                                        color = Color.White.copy(alpha = 0.85f),
-                                        fontSize = 11.sp
-                                    )
-                                }
-                            }
-
-                            // Bottom: Lunar Date
-                            if (showLunar) {
-                                Column {
-                                    Text(
-                                        text = "Âm: ${lunarDate.day}/${lunarDate.month}${if (lunarDate.isLeap) " (Nhuận)" else ""}",
-                                        color = Color(0xFFFDE047),
-                                        fontSize = 12.5.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    if (showCanChi) {
+                                    Column {
                                         Text(
-                                            text = "Năm ${lunarDate.canChiYear}",
-                                            color = Color.White.copy(alpha = 0.75f),
-                                            fontSize = 10.sp
+                                            text = headerTitle,
+                                            color = Color.White.copy(alpha = 0.9f),
+                                            fontSize = 9.5.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+
+                                        // Chữ xem đầy đủ di chuyển dưới chữ lịch vạn niên
+                                        if (leftPagerState.currentPage == 1) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .clickable { viewModel.openFullCalendarDialog() },
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                            ) {
+                                                Text("Xem đầy đủ", color = Color(0xFFFBBF24), fontSize = 8.sp, fontWeight = FontWeight.SemiBold)
+                                                Icon(Icons.Default.OpenInNew, contentDescription = null, tint = Color(0xFFFBBF24), modifier = Modifier.size(8.5.dp))
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // 3 dots for Left Card
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    repeat(3) { idx ->
+                                        Box(
+                                            modifier = Modifier
+                                                .size(if (leftPagerState.currentPage == idx) 6.dp else 4.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    if (leftPagerState.currentPage == idx) {
+                                                        when (idx) {
+                                                            0 -> Color(0xFF38BDF8)
+                                                            1 -> Color(0xFFFFB74D)
+                                                            else -> Color(0xFFF43F5E)
+                                                        }
+                                                    } else Color.White.copy(alpha = 0.35f)
+                                                )
+                                                .clickable {
+                                                    pagerScope.launch { leftPagerState.animateScrollToPage(idx) }
+                                                }
                                         )
                                     }
-                                    Text(
-                                        text = "Chạm để xem chi tiết lịch",
-                                        color = Color.White.copy(alpha = 0.45f),
-                                        fontSize = 8.5.sp
-                                    )
+                                }
+                            }
+
+                            // 3-page HorizontalPager for Left Card
+                            HorizontalPager(
+                                state = leftPagerState,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                            ) { page ->
+                                when (page) {
+                                    0 -> {
+                                        // Ô 1: Chọn ảnh QR ngân hàng từ bộ nhớ máy & hiển thị
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(top = 2.dp),
+                                            verticalArrangement = Arrangement.SpaceBetween,
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            if (bankQrUri != null) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(10.dp),
+                                                    color = Color.White,
+                                                    shadowElevation = 4.dp,
+                                                    modifier = Modifier
+                                                        .size(92.dp)
+                                                        .clickable { viewModel.openBankQrZoom() }
+                                                ) {
+                                                    Image(
+                                                        painter = rememberAsyncImagePainter(model = bankQrUri),
+                                                        contentDescription = "Mã QR ngân hàng",
+                                                        contentScale = ContentScale.Fit,
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .padding(4.dp)
+                                                    )
+                                                }
+
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceEvenly,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = "🔍 Phóng to",
+                                                        color = Color(0xFF60A5FA),
+                                                        fontSize = 8.5.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(4.dp))
+                                                            .clickable { viewModel.openBankQrZoom() }
+                                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                                                    )
+                                                    Text(
+                                                        text = "🔄 Đổi ảnh QR",
+                                                        color = Color(0xFFFDE047),
+                                                        fontSize = 8.5.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(4.dp))
+                                                            .clickable { onPickBankQr() }
+                                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            } else {
+                                                Column(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .weight(1f)
+                                                        .clip(RoundedCornerShape(12.dp))
+                                                        .background(Color.White.copy(alpha = 0.06f))
+                                                        .clickable { onPickBankQr() }
+                                                        .padding(6.dp),
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                    verticalArrangement = Arrangement.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.AddPhotoAlternate,
+                                                        contentDescription = null,
+                                                        tint = Color(0xFF38BDF8),
+                                                        modifier = Modifier.size(24.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.height(3.dp))
+                                                    Text(
+                                                        text = "Chọn ảnh QR ngân hàng",
+                                                        color = Color.White,
+                                                        fontSize = 9.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                    Text(
+                                                        text = "Chạm để tải từ bộ nhớ máy",
+                                                        color = Color.White.copy(alpha = 0.6f),
+                                                        fontSize = 7.5.sp
+                                                    )
+                                                }
+
+                                                Surface(
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = Color(0xFF0284C7).copy(alpha = 0.4f),
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clickable { onPickBankQr() }
+                                                ) {
+                                                    Text(
+                                                        text = "Tải ảnh mã QR",
+                                                        color = Color(0xFF7DD3FC),
+                                                        fontSize = 8.5.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(vertical = 3.dp),
+                                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                                    )
+                                                }
+                                            }
+
+                                            Text(
+                                                text = "👉 Cuộn sang xem Lịch Vạn Niên",
+                                                color = Color.White.copy(alpha = 0.45f),
+                                                fontSize = 7.5.sp,
+                                                modifier = Modifier.clickable {
+                                                    pagerScope.launch { leftPagerState.animateScrollToPage(1) }
+                                                }
+                                            )
+                                        }
+                                    }
+                                    1 -> {
+                                        // Ô 2: Lịch Vạn Niên (Xem đầy đủ ở dưới tiêu đề, âm lịch dưới cùng)
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clickable { viewModel.openFullCalendarDialog() },
+                                            verticalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            // Center: Đồng hồ giờ & ngày dương
+                                            if (showClock) {
+                                                Column(modifier = Modifier.padding(top = 2.dp)) {
+                                                    Text(
+                                                        text = formattedTime,
+                                                        color = Color.White,
+                                                        fontSize = 25.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                    Text(
+                                                        text = formattedDate,
+                                                        color = Color.White.copy(alpha = 0.85f),
+                                                        fontSize = 10.5.sp
+                                                    )
+                                                }
+                                            }
+
+                                            // Thêm âm lịch vào dưới cùng
+                                            if (showLunar) {
+                                                Column(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
+                                                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "Âm lịch: Ngày ${lunarDate.day}/${lunarDate.month}${if (lunarDate.isLeap) " (Nhuận)" else ""}",
+                                                        color = Color(0xFFFDE047),
+                                                        fontSize = 11.5.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                    if (showCanChi) {
+                                                        Text(
+                                                            text = "Năm ${lunarDate.canChiYear} • Giờ ${lunarDate.canChiDay}",
+                                                            color = Color.White.copy(alpha = 0.75f),
+                                                            fontSize = 8.5.sp
+                                                        )
+                                                    }
+                                                    Text(
+                                                        text = "Chạm để xem lịch vạn niên đầy đủ",
+                                                        color = Color.White.copy(alpha = 0.45f),
+                                                        fontSize = 7.5.sp
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                    2 -> {
+                                        // Ô 3: Trình phát nhạc kèm cover art, dừng, play, chuyển bài
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(top = 2.dp),
+                                            verticalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            // Row: Cover art + Song details
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                // Cover Art
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(42.dp)
+                                                        .clip(RoundedCornerShape(10.dp))
+                                                        .background(
+                                                            Brush.linearGradient(
+                                                                listOf(
+                                                                    Color(currentTrack.coverGradientStart),
+                                                                    Color(currentTrack.coverGradientEnd)
+                                                                )
+                                                            )
+                                                        )
+                                                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(10.dp)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.MusicNote,
+                                                        contentDescription = null,
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
+
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = currentTrack.title,
+                                                        color = Color.White,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        maxLines = 1
+                                                    )
+                                                    Text(
+                                                        text = currentTrack.artist,
+                                                        color = Color.White.copy(alpha = 0.7f),
+                                                        fontSize = 8.5.sp,
+                                                        maxLines = 1
+                                                    )
+                                                    Text(
+                                                        text = if (isMusicPlaying) "● Đang phát" else "○ Tạm dừng",
+                                                        color = if (isMusicPlaying) Color(0xFF4ADE80) else Color.White.copy(alpha = 0.5f),
+                                                        fontSize = 7.5.sp
+                                                    )
+                                                }
+                                            }
+
+                                            // Progress bar
+                                            val playedMin = musicProgressSeconds / 60
+                                            val playedSec = musicProgressSeconds % 60
+                                            val progressPercent = (musicProgressSeconds.toFloat() / currentTrack.totalSeconds.toFloat()).coerceIn(0f, 1f)
+
+                                            Column(modifier = Modifier.fillMaxWidth()) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Text(
+                                                        text = String.format(Locale.US, "%02d:%02d", playedMin, playedSec),
+                                                        color = Color.White.copy(alpha = 0.7f),
+                                                        fontSize = 7.5.sp
+                                                    )
+                                                    Text(
+                                                        text = currentTrack.durationText,
+                                                        color = Color.White.copy(alpha = 0.7f),
+                                                        fontSize = 7.5.sp
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                LinearProgressIndicator(
+                                                    progress = { progressPercent },
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .height(3.dp)
+                                                        .clip(CircleShape),
+                                                    color = Color(0xFFF43F5E),
+                                                    trackColor = Color.White.copy(alpha = 0.15f)
+                                                )
+                                            }
+
+                                            // Playback buttons: Previous, Play/Pause, Next
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                // Prev
+                                                IconButton(
+                                                    onClick = { viewModel.prevMusicTrack() },
+                                                    modifier = Modifier.size(28.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.SkipPrevious,
+                                                        contentDescription = "Bài trước",
+                                                        tint = Color.White.copy(alpha = 0.9f),
+                                                        modifier = Modifier.size(17.dp)
+                                                    )
+                                                }
+
+                                                // Play / Pause toggle
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(34.dp)
+                                                        .clip(CircleShape)
+                                                        .background(
+                                                            Brush.linearGradient(
+                                                                listOf(Color(0xFFE11D48), Color(0xFFFB7185))
+                                                            )
+                                                        )
+                                                        .clickable { viewModel.toggleMusicPlayPause() },
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (isMusicPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                                        contentDescription = if (isMusicPlaying) "Dừng phát" else "Tiếp tục phát",
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+
+                                                // Next
+                                                IconButton(
+                                                    onClick = { viewModel.nextMusicTrack() },
+                                                    modifier = Modifier.size(28.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.SkipNext,
+                                                        contentDescription = "Bài kế tiếp",
+                                                        tint = Color.White.copy(alpha = 0.9f),
+                                                        modifier = Modifier.size(17.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                // Widget 2: Giá Thị Trường (Cà Phê, Giá Vàng & Xăng Dầu) với trang cuộn sang phải
+                // Widget 2: Giá Thị Trường (3 trang: 0 = Cà Phê & Vàng, 1 = Giá Xăng, 2 = Giá Dầu)
                 if (showMarketPrices) {
                     Card(
                         shape = RoundedCornerShape(20.dp),
@@ -307,7 +666,7 @@ fun DesktopArea(
                                 .padding(10.dp),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            // Top Bar inside Card: Title + Page Indicator + Refresh
+                            // Top Bar inside Right Card: Title + 3 Page Dots + Refresh
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -318,31 +677,45 @@ fun DesktopArea(
                                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                                     modifier = Modifier.clickable {
                                         pagerScope.launch {
-                                            marketPagerState.animateScrollToPage(if (marketPagerState.currentPage == 0) 1 else 0)
+                                            val next = (marketPagerState.currentPage + 1) % 3
+                                            marketPagerState.animateScrollToPage(next)
                                         }
                                     }
                                 ) {
+                                    val headerIcon = when (marketPagerState.currentPage) {
+                                        0 -> Icons.Default.TrendingUp
+                                        1 -> Icons.Default.LocalGasStation
+                                        else -> Icons.Default.WaterDrop
+                                    }
+                                    val headerTint = when (marketPagerState.currentPage) {
+                                        0 -> Color(0xFF34D399)
+                                        1 -> Color(0xFFF97316)
+                                        else -> Color(0xFF38BDF8)
+                                    }
+                                    val headerTitle = when (marketPagerState.currentPage) {
+                                        0 -> "GIÁ CÀ PHÊ & VÀNG"
+                                        1 -> "GIÁ XĂNG DẦU"
+                                        else -> "GIÁ DẦU"
+                                    }
+
                                     Box(
                                         modifier = Modifier
                                             .size(18.dp)
                                             .clip(CircleShape)
-                                            .background(
-                                                if (marketPagerState.currentPage == 0) Color(0xFF34D399).copy(alpha = 0.25f)
-                                                else Color(0xFFF97316).copy(alpha = 0.25f)
-                                            ),
+                                            .background(headerTint.copy(alpha = 0.25f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            imageVector = if (marketPagerState.currentPage == 0) Icons.Default.TrendingUp else Icons.Default.LocalGasStation,
+                                            imageVector = headerIcon,
                                             contentDescription = null,
-                                            tint = if (marketPagerState.currentPage == 0) Color(0xFF34D399) else Color(0xFFF97316),
+                                            tint = headerTint,
                                             modifier = Modifier.size(12.dp)
                                         )
                                     }
                                     Text(
-                                        text = if (marketPagerState.currentPage == 0) "GIÁ THỊ TRƯỜNG" else "GIÁ XĂNG DẦU",
+                                        text = headerTitle,
                                         color = Color.White.copy(alpha = 0.85f),
-                                        fontSize = 9.5.sp,
+                                        fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -351,23 +724,30 @@ fun DesktopArea(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    // Page switcher dots
+                                    // 3 Page switcher dots
                                     Row(
                                         horizontalArrangement = Arrangement.spacedBy(3.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(if (marketPagerState.currentPage == 0) 6.dp else 4.dp)
-                                                .clip(CircleShape)
-                                                .background(if (marketPagerState.currentPage == 0) Color(0xFF34D399) else Color.White.copy(alpha = 0.35f))
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .size(if (marketPagerState.currentPage == 1) 6.dp else 4.dp)
-                                                .clip(CircleShape)
-                                                .background(if (marketPagerState.currentPage == 1) Color(0xFFF97316) else Color.White.copy(alpha = 0.35f))
-                                        )
+                                        repeat(3) { idx ->
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(if (marketPagerState.currentPage == idx) 6.dp else 4.dp)
+                                                    .clip(CircleShape)
+                                                    .background(
+                                                        if (marketPagerState.currentPage == idx) {
+                                                            when (idx) {
+                                                                0 -> Color(0xFF34D399)
+                                                                1 -> Color(0xFFF97316)
+                                                                else -> Color(0xFF38BDF8)
+                                                            }
+                                                        } else Color.White.copy(alpha = 0.35f)
+                                                    )
+                                                    .clickable {
+                                                        pagerScope.launch { marketPagerState.animateScrollToPage(idx) }
+                                                    }
+                                            )
+                                        }
                                     }
 
                                     Icon(
@@ -381,207 +761,297 @@ fun DesktopArea(
                                 }
                             }
 
-                            // Horizontal Pager: Page 0 = Cà phê (Lâm Đồng) & Giá Vàng; Page 1 = Giá Xăng Dầu Vùng 1, 2, 3
+                            // Horizontal Pager: Page 0 = Cà phê (Lâm Đồng) & Giá Vàng; Page 1 = Giá Xăng; Page 2 = Giá Dầu
                             HorizontalPager(
                                 state = marketPagerState,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .weight(1f)
                             ) { page ->
-                                if (page == 0) {
-                                    // Page 0: Coffee (Giá tại: Lâm Đồng) & Gold (Click to open full gold dialog)
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(top = 4.dp),
-                                        verticalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        // Coffee section with "Giá tại: Lâm Đồng" as requested
+                                when (page) {
+                                    0 -> {
+                                        // Page 0: Coffee (Bỏ chữ 'giá tại :') & Gold (Click to open full gold dialog)
                                         Column(
                                             modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .clickable { viewModel.openCoffeeOnlineDialog() }
-                                                .padding(vertical = 2.dp)
+                                                .fillMaxSize()
+                                                .padding(top = 4.dp),
+                                            verticalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                            // Coffee section - Ô giá thị trường bỏ chữ "giá tại :"
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clickable { viewModel.openCoffeeOnlineDialog() }
+                                                    .padding(vertical = 2.dp)
                                             ) {
-                                                Text(
-                                                    text = "☕ Cà phê",
-                                                    color = Color(0xFFFED7AA),
-                                                    fontSize = 10.5.sp,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                                Text(
-                                                    text = "(Giá tại: Lâm Đồng)",
-                                                    color = Color(0xFF60A5FA),
-                                                    fontSize = 8.5.sp,
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
-                                            }
-                                            Text(
-                                                text = marketPrices?.lamDongCoffeePrice ?: "89.000 đ/kg",
-                                                color = Color(0xFFFBBF24),
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            Text(
-                                                text = "Di Linh: 88.900 | Bảo Lộc: 89.000 đ",
-                                                color = Color.White.copy(alpha = 0.6f),
-                                                fontSize = 8.sp
-                                            )
-                                        }
-
-                                        // Gold section - click to open full gold prices as requested
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .clickable { viewModel.openGoldPriceDialog() }
-                                                .padding(vertical = 2.dp)
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.SpaceBetween
-                                            ) {
-                                                Text(
-                                                    text = "🥇 Giá Vàng",
-                                                    color = Color(0xFFFEF08A),
-                                                    fontSize = 10.5.sp,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                                Text(
-                                                    text = "Xem đầy đủ >",
-                                                    color = Color(0xFF34D399),
-                                                    fontSize = 8.5.sp,
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
-                                            }
-                                            val sjcGold = marketPrices?.goldPrices?.find { it.brand.contains("SJC") }
-                                                ?: marketPrices?.goldPrices?.firstOrNull()
-                                            Text(
-                                                text = "SJC: ${sjcGold?.sellPrice ?: "142.000.000 đ"}",
-                                                color = Color(0xFF4ADE80),
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            val ringGold = marketPrices?.goldPrices?.find { it.brand.contains("Nhẫn") }
-                                            Text(
-                                                text = "Nhẫn 9999: ${ringGold?.sellPrice ?: "139.000.000 đ"}",
-                                                color = Color(0xFFFDE047),
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                        }
-
-                                        // Swipe right hint to Gasoline
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable {
-                                                    pagerScope.launch { marketPagerState.animateScrollToPage(1) }
-                                                },
-                                            horizontalArrangement = Arrangement.Center,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = "Cuộn sang phải xem Giá Xăng 👉",
-                                                color = Color(0xFFF97316),
-                                                fontSize = 8.sp,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                        }
-                                    }
-                                } else {
-                                    // Page 1: Petrol prices for Region 1, Region 2, Region 3
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(top = 2.dp),
-                                        verticalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        // Column header: Region 1, Region 2, Region 3
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
-                                                .padding(horizontal = 4.dp, vertical = 2.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text("Loại xăng/dầu", color = Color.Gray, fontSize = 7.5.sp, modifier = Modifier.weight(1.1f))
-                                            Text("Vùng 1", color = Color(0xFF60A5FA), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
-                                            Text("Vùng 2", color = Color(0xFFFBBF24), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
-                                            Text("Vùng 3", color = Color(0xFFF87171), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
-                                        }
-
-                                        val fuelItems = marketPrices?.petrolPrices ?: listOf(
-                                            com.example.model.PetrolPrice("RON 95-III", "21.010", "21.430", "21.850"),
-                                            com.example.model.PetrolPrice("E5 RON 92", "19.980", "20.370", "20.770"),
-                                            com.example.model.PetrolPrice("Dầu DO 0.05S", "18.980", "19.350", "19.730"),
-                                            com.example.model.PetrolPrice("Dầu Hỏa", "19.120", "19.500", "19.880")
-                                        )
-
-                                        Column(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                                        ) {
-                                            fuelItems.take(4).forEach { fuel ->
                                                 Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.CenterVertically
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                                                 ) {
                                                     Text(
-                                                        text = fuel.fuelType.replace("Xăng ", ""),
-                                                        color = Color.White,
-                                                        fontSize = 8.sp,
-                                                        fontWeight = FontWeight.Medium,
-                                                        modifier = Modifier.weight(1.1f)
+                                                        text = "☕ Cà phê",
+                                                        color = Color(0xFFFED7AA),
+                                                        fontSize = 10.5.sp,
+                                                        fontWeight = FontWeight.Bold
                                                     )
                                                     Text(
-                                                        text = fuel.region1Price.replace(" đ/lít", ""),
-                                                        color = Color(0xFF93C5FD),
-                                                        fontSize = 8.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        modifier = Modifier.weight(0.9f)
-                                                    )
-                                                    Text(
-                                                        text = fuel.region2Price.replace(" đ/lít", ""),
-                                                        color = Color(0xFFFDE047),
-                                                        fontSize = 8.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        modifier = Modifier.weight(0.9f)
-                                                    )
-                                                    Text(
-                                                        text = fuel.region3Price.replace(" đ/lít", ""),
-                                                        color = Color(0xFFFCA5A5),
-                                                        fontSize = 8.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        modifier = Modifier.weight(0.9f)
+                                                        text = "Lâm Đồng",
+                                                        color = Color(0xFF60A5FA),
+                                                        fontSize = 9.sp,
+                                                        fontWeight = FontWeight.Bold
                                                     )
                                                 }
+                                                Text(
+                                                    text = marketPrices?.lamDongCoffeePrice ?: "89.000 đ/kg",
+                                                    color = Color(0xFFFBBF24),
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    text = "Di Linh: 88.900 | Bảo Lộc: 89.000 đ",
+                                                    color = Color.White.copy(alpha = 0.6f),
+                                                    fontSize = 8.sp
+                                                )
+                                            }
+
+                                            // Gold section - click to open full gold prices as requested
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clickable { viewModel.openGoldPriceDialog() }
+                                                    .padding(vertical = 2.dp)
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Text(
+                                                        text = "🥇 Giá Vàng",
+                                                        color = Color(0xFFFEF08A),
+                                                        fontSize = 10.5.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                    Text(
+                                                        text = "Xem đầy đủ >",
+                                                        color = Color(0xFF34D399),
+                                                        fontSize = 8.5.sp,
+                                                        fontWeight = FontWeight.SemiBold
+                                                    )
+                                                }
+                                                val sjcGold = marketPrices?.goldPrices?.find { it.brand.contains("SJC") }
+                                                    ?: marketPrices?.goldPrices?.firstOrNull()
+                                                Text(
+                                                    text = "SJC: ${sjcGold?.sellPrice ?: "142.000.000 đ"}",
+                                                    color = Color(0xFF4ADE80),
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                val ringGold = marketPrices?.goldPrices?.find { it.brand.contains("Nhẫn") }
+                                                Text(
+                                                    text = "Nhẫn 9999: ${ringGold?.sellPrice ?: "139.000.000 đ"}",
+                                                    color = Color(0xFFFDE047),
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
+
+                                            // Swipe right hint to Gasoline
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable {
+                                                        pagerScope.launch { marketPagerState.animateScrollToPage(1) }
+                                                    },
+                                                horizontalArrangement = Arrangement.Center,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = "Cuộn sang phải xem Giá Xăng 👉",
+                                                    color = Color(0xFFF97316),
+                                                    fontSize = 8.sp,
+                                                    fontWeight = FontWeight.Medium
+                                                )
                                             }
                                         }
-
-                                        // Swipe back hint
-                                        Row(
+                                    }
+                                    1 -> {
+                                        // Page 1: Petrol prices (Giá Xăng) for Region 1, Region 2, Region 3
+                                        Column(
                                             modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable {
-                                                    pagerScope.launch { marketPagerState.animateScrollToPage(0) }
-                                                },
-                                            horizontalArrangement = Arrangement.Center,
-                                            verticalAlignment = Alignment.CenterVertically
+                                                .fillMaxSize()
+                                                .padding(top = 2.dp),
+                                            verticalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            Text(
-                                                text = "👈 Cuộn trái xem Cà phê & Vàng",
-                                                color = Color(0xFF34D399),
-                                                fontSize = 8.sp,
-                                                fontWeight = FontWeight.Medium
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
+                                                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text("Loại xăng", color = Color.Gray, fontSize = 7.5.sp, modifier = Modifier.weight(1.1f))
+                                                Text("Vùng 1", color = Color(0xFF60A5FA), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
+                                                Text("Vùng 2", color = Color(0xFFFBBF24), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
+                                                Text("Vùng 3", color = Color(0xFFF87171), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
+                                            }
+
+                                            val gasolineItems = marketPrices?.petrolPrices ?: listOf(
+                                                com.example.model.PetrolPrice("RON 95-V", "21.490", "21.910", "22.340"),
+                                                com.example.model.PetrolPrice("RON 95-III", "21.010", "21.430", "21.850"),
+                                                com.example.model.PetrolPrice("E5 RON 92", "19.980", "20.370", "20.770")
                                             )
+
+                                            Column(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalArrangement = Arrangement.spacedBy(3.dp)
+                                            ) {
+                                                gasolineItems.take(3).forEach { fuel ->
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Text(
+                                                            text = fuel.fuelType.replace("Xăng ", ""),
+                                                            color = Color.White,
+                                                            fontSize = 8.sp,
+                                                            fontWeight = FontWeight.Medium,
+                                                            modifier = Modifier.weight(1.1f)
+                                                        )
+                                                        Text(
+                                                            text = fuel.region1Price.replace(" đ/lít", ""),
+                                                            color = Color(0xFF93C5FD),
+                                                            fontSize = 8.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            modifier = Modifier.weight(0.9f)
+                                                        )
+                                                        Text(
+                                                            text = fuel.region2Price.replace(" đ/lít", ""),
+                                                            color = Color(0xFFFDE047),
+                                                            fontSize = 8.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            modifier = Modifier.weight(0.9f)
+                                                        )
+                                                        Text(
+                                                            text = fuel.region3Price.replace(" đ/lít", ""),
+                                                            color = Color(0xFFFCA5A5),
+                                                            fontSize = 8.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            modifier = Modifier.weight(0.9f)
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            // Swipe hint to Oil
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable {
+                                                        pagerScope.launch { marketPagerState.animateScrollToPage(2) }
+                                                    },
+                                                horizontalArrangement = Arrangement.Center,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = "Cuộn sang phải xem Giá Dầu 👉",
+                                                    color = Color(0xFF38BDF8),
+                                                    fontSize = 8.sp,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
+                                        }
+                                    }
+                                    2 -> {
+                                        // Page 2: Oil prices (Giá Dầu) for Region 1, Region 2, Region 3
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(top = 2.dp),
+                                            verticalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
+                                                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text("Loại dầu", color = Color.Gray, fontSize = 7.5.sp, modifier = Modifier.weight(1.1f))
+                                                Text("Vùng 1", color = Color(0xFF60A5FA), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
+                                                Text("Vùng 2", color = Color(0xFFFBBF24), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
+                                                Text("Vùng 3", color = Color(0xFFF87171), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
+                                            }
+
+                                            val oilItems = marketPrices?.oilPrices ?: listOf(
+                                                com.example.model.PetrolPrice("DO 0.001S", "19.380", "19.760", "20.150"),
+                                                com.example.model.PetrolPrice("DO 0.05S", "18.980", "19.350", "19.730"),
+                                                com.example.model.PetrolPrice("Dầu Hỏa", "19.120", "19.500", "19.880"),
+                                                com.example.model.PetrolPrice("Mazút 180", "15.820", "16.130", "16.450")
+                                            )
+
+                                            Column(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                                            ) {
+                                                oilItems.take(4).forEach { fuel ->
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Text(
+                                                            text = fuel.fuelType.replace("Dầu ", ""),
+                                                            color = Color.White,
+                                                            fontSize = 8.sp,
+                                                            fontWeight = FontWeight.Medium,
+                                                            modifier = Modifier.weight(1.1f)
+                                                        )
+                                                        Text(
+                                                            text = fuel.region1Price.replace(" đ/lít", "").replace(" đ/kg", ""),
+                                                            color = Color(0xFF93C5FD),
+                                                            fontSize = 8.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            modifier = Modifier.weight(0.9f)
+                                                        )
+                                                        Text(
+                                                            text = fuel.region2Price.replace(" đ/lít", "").replace(" đ/kg", ""),
+                                                            color = Color(0xFFFDE047),
+                                                            fontSize = 8.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            modifier = Modifier.weight(0.9f)
+                                                        )
+                                                        Text(
+                                                            text = fuel.region3Price.replace(" đ/lít", "").replace(" đ/kg", ""),
+                                                            color = Color(0xFFFCA5A5),
+                                                            fontSize = 8.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            modifier = Modifier.weight(0.9f)
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            // Swipe back hint
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable {
+                                                        pagerScope.launch { marketPagerState.animateScrollToPage(0) }
+                                                    },
+                                                horizontalArrangement = Arrangement.Center,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = "👈 Cuộn trái xem Cà phê & Vàng",
+                                                    color = Color(0xFF34D399),
+                                                    fontSize = 8.sp,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
                                         }
                                     }
                                 }

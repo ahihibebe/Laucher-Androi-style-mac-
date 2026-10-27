@@ -129,10 +129,16 @@ class MarketPriceRepository {
             GoldPrice("Nữ trang Vàng 10K (41.7%)", "Nữ trang", "52.400.000 đ", "57.800.000 đ", "+150.000 đ/lượng")
         )
 
-        // Bảng giá xăng dầu Việt Nam (Petrolimex) Vùng 1, Vùng 2, Vùng 3
+        // Bảng giá xăng Việt Nam (Petrolimex) Vùng 1, Vùng 2, Vùng 3
         val petrolList = listOf(
+            PetrolPrice("Xăng RON 95-V", "21.490 đ/lít", "21.910 đ/lít", "22.340 đ/lít", "+210 đ/lít"),
             PetrolPrice("Xăng RON 95-III", "21.010 đ/lít", "21.430 đ/lít", "21.850 đ/lít", "+180 đ/lít"),
-            PetrolPrice("Xăng E5 RON 92-II", "19.980 đ/lít", "20.370 đ/lít", "20.770 đ/lít", "+150 đ/lít"),
+            PetrolPrice("Xăng E5 RON 92-II", "19.980 đ/lít", "20.370 đ/lít", "20.770 đ/lít", "+150 đ/lít")
+        )
+
+        // Bảng giá dầu Việt Nam (Petrolimex) Vùng 1, Vùng 2, Vùng 3
+        val oilList = listOf(
+            PetrolPrice("Dầu DO 0.001S-V", "19.380 đ/lít", "19.760 đ/lít", "20.150 đ/lít", "+120 đ/lít"),
             PetrolPrice("Dầu DO 0.05S-II (Điêzen)", "18.980 đ/lít", "19.350 đ/lít", "19.730 đ/lít", "+110 đ/lít"),
             PetrolPrice("Dầu Hỏa 2-KO", "19.120 đ/lít", "19.500 đ/lít", "19.880 đ/lít", "+120 đ/lít"),
             PetrolPrice("Dầu Mazút 180CST 3.5S", "15.820 đ/kg", "16.130 đ/kg", "16.450 đ/kg", "+90 đ/kg")
@@ -145,6 +151,7 @@ class MarketPriceRepository {
             lamDongDistricts = lamDongDistrictsList,
             goldPrices = fullGoldList,
             petrolPrices = petrolList,
+            oilPrices = oilList,
             lastUpdated = now
         )
     }

@@ -540,7 +540,7 @@ private fun MarketPricesSettingsPane(
         ) {
             Column {
                 Text("Giá Thị Trường (Cà phê, Vàng, Xăng dầu)", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text("Giá tại: Lâm Đồng & Toàn quốc (Cập nhật ngày giờ)", color = Color.Gray, fontSize = 11.sp)
+                Text("Lâm Đồng & Toàn quốc (Cập nhật ngày giờ)", color = Color.Gray, fontSize = 11.sp)
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -584,7 +584,7 @@ private fun MarketPricesSettingsPane(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Hiển thị widget Giá Thị Trường", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                    Text("Cà phê (Lâm Đồng), Giá Vàng & Xăng dầu Vùng 1, 2, 3", color = Color.Gray, fontSize = 10.5.sp)
+                    Text("Cà phê Lâm Đồng, Giá Vàng, Giá Xăng & Giá Dầu", color = Color.Gray, fontSize = 10.5.sp)
                 }
                 Switch(
                     checked = showMarketPrices,
@@ -606,10 +606,10 @@ private fun MarketPricesSettingsPane(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("☕ GIÁ CÀ PHÊ (GIÁ TẠI: LÂM ĐỒNG & TÂY NGUYÊN)", color = Color(0xFFFED7AA), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("☕ GIÁ CÀ PHÊ (LÂM ĐỒNG & TÂY NGUYÊN)", color = Color(0xFFFED7AA), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 marketPrices?.coffeePrices?.forEach { item ->
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(if (item.province == "Lâm Đồng") "Giá tại: Lâm Đồng" else "Cà phê ${item.province}:", color = if (item.province == "Lâm Đồng") Color(0xFFFDE047) else Color.LightGray, fontSize = 12.sp, fontWeight = if (item.province == "Lâm Đồng") FontWeight.Bold else FontWeight.Normal)
+                        Text(if (item.province == "Lâm Đồng") "Cà phê Lâm Đồng:" else "Cà phê ${item.province}:", color = if (item.province == "Lâm Đồng") Color(0xFFFDE047) else Color.LightGray, fontSize = 12.sp, fontWeight = if (item.province == "Lâm Đồng") FontWeight.Bold else FontWeight.Normal)
                         Text(item.priceText, color = Color(0xFFFBBF24), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -624,8 +624,21 @@ private fun MarketPricesSettingsPane(
                 }
 
                 HorizontalDivider(color = Color(0xFF3A4D3B))
-                Text("⛽ GIÁ XĂNG DẦU (VÙNG 1, VÙNG 2, VÙNG 3)", color = Color(0xFF93C5FD), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("⛽ GIÁ XĂNG (VÙNG 1, VÙNG 2, VÙNG 3)", color = Color(0xFF93C5FD), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 marketPrices?.petrolPrices?.forEach { fuel ->
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(fuel.fuelType, color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Vùng 1: ${fuel.region1Price}", color = Color(0xFF93C5FD), fontSize = 10.5.sp)
+                            Text("Vùng 2: ${fuel.region2Price}", color = Color(0xFFFDE047), fontSize = 10.5.sp)
+                            Text("Vùng 3: ${fuel.region3Price}", color = Color(0xFFFCA5A5), fontSize = 10.5.sp)
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = Color(0xFF3A4D3B))
+                Text("🛢️ GIÁ DẦU (VÙNG 1, VÙNG 2, VÙNG 3)", color = Color(0xFF38BDF8), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                marketPrices?.oilPrices?.forEach { fuel ->
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Text(fuel.fuelType, color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
