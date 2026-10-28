@@ -17,4 +17,5 @@
     <string name="control_center">Trung tâm điều khiển</string>
     <string name="dev_name">Dev Trường Thanh</string>
     <string name="dev_facebook">fb.com/TruongAlone</string>
+    <string name="accessibility_service_desc">Cho phép ứng dụng khóa màn hình khi bạn chạm 2 lần vào màn hình chính.</string>
 </resources>

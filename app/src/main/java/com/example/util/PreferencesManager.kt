@@ -26,11 +26,26 @@ class PreferencesManager(context: Context) {
         private const val KEY_SHOW_LAUNCHPAD_GUIDE = "show_launchpad_guide"
         private const val KEY_APP_ORDER = "app_order_list"
         private const val KEY_BANK_QR_URI = "bank_qr_uri"
+        private const val KEY_DOUBLE_TAP_LOCK = "double_tap_to_lock"
+        private const val KEY_BANK_QR_SCALE = "bank_qr_scale"
+        private const val KEY_BANK_QR_FIT_MODE = "bank_qr_fit_mode"
     }
 
     var bankQrUri: String?
         get() = prefs.getString(KEY_BANK_QR_URI, null)
         set(value) = prefs.edit().putString(KEY_BANK_QR_URI, value).apply()
+
+    var doubleTapToLock: Boolean
+        get() = prefs.getBoolean(KEY_DOUBLE_TAP_LOCK, true)
+        set(value) = prefs.edit().putBoolean(KEY_DOUBLE_TAP_LOCK, value).apply()
+
+    var bankQrScale: Float
+        get() = prefs.getFloat(KEY_BANK_QR_SCALE, 1.0f)
+        set(value) = prefs.edit().putFloat(KEY_BANK_QR_SCALE, value).apply()
+
+    var bankQrFitMode: String
+        get() = prefs.getString(KEY_BANK_QR_FIT_MODE, "fit") ?: "fit"
+        set(value) = prefs.edit().putString(KEY_BANK_QR_FIT_MODE, value).apply()
 
     var showClock: Boolean
         get() = prefs.getBoolean(KEY_SHOW_CLOCK, true)
@@ -92,6 +107,12 @@ class PreferencesManager(context: Context) {
     fun hidePackage(pkg: String) {
         val current = hiddenPackages.toMutableSet()
         current.add(pkg)
+        hiddenPackages = current
+    }
+
+    fun unhidePackage(pkg: String) {
+        val current = hiddenPackages.toMutableSet()
+        current.remove(pkg)
         hiddenPackages = current
     }
 

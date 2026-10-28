@@ -23,6 +23,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -31,11 +33,17 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -53,6 +61,9 @@ fun BankQrZoomDialog(
     onDeleteQr: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    var zoomScale by remember { mutableFloatStateOf(1.0f) }
+    var fitMode by remember { mutableStateOf("fit") }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -132,9 +143,9 @@ fun BankQrZoomDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                // High contrast white box for optimal scanning
+                // High contrast white box for optimal scanning with resize/zoom
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = Color.White,
@@ -142,34 +153,93 @@ fun BankQrZoomDialog(
                     modifier = Modifier
                         .fillMaxWidth(0.85f)
                         .aspectRatio(1f)
+                        .clip(RoundedCornerShape(16.dp))
                         .padding(8.dp)
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(8.dp),
+                            .clip(RoundedCornerShape(12.dp))
+                            .padding(6.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Image(
                             painter = rememberAsyncImagePainter(model = qrUri),
                             contentDescription = "Mã QR Ngân Hàng",
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize()
+                            contentScale = if (fitMode == "fit") ContentScale.Fit else ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    scaleX = zoomScale
+                                    scaleY = zoomScale
+                                }
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Resize & Fit Toolbar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Button(
+                            onClick = { zoomScale = (zoomScale - 0.15f).coerceAtLeast(0.6f) },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.15f)),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text("− Thu nhỏ", fontSize = 11.sp, color = Color.White)
+                        }
+
+                        Text(
+                            text = "${(zoomScale * 100).toInt()}%",
+                            color = Color(0xFF67E8F9),
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .clickable { zoomScale = 1.0f }
+                                .padding(horizontal = 4.dp)
+                        )
+
+                        Button(
+                            onClick = { zoomScale = (zoomScale + 0.15f).coerceAtMost(2.5f) },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.15f)),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text("+ Phóng to", fontSize = 11.sp, color = Color.White)
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = { fitMode = if (fitMode == "fit") "crop" else "fit" },
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(if (fitMode == "fit") "Vừa khung" else "Lấp đầy", fontSize = 11.sp, color = Color(0xFFFBBF24))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
                     text = "Đưa mã này cho người khác để quét thanh toán / chuyển khoản nhanh",
                     color = Color.White.copy(alpha = 0.7f),
-                    fontSize = 11.5.sp,
+                    fontSize = 11.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 24.dp)
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 Row(
                     modifier = Modifier

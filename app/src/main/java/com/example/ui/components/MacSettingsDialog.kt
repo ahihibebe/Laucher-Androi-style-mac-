@@ -39,6 +39,9 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Swipe
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -202,6 +205,12 @@ fun MacSettingsDialog(
                             onClick = { viewModel.selectSettingsCategory(SettingsCategory.WALLPAPER) }
                         )
                         SettingsSidebarItem(
+                            icon = Icons.Default.VisibilityOff,
+                            label = "Ứng dụng ẩn",
+                            isSelected = selectedCategory == SettingsCategory.HIDDEN_APPS,
+                            onClick = { viewModel.selectSettingsCategory(SettingsCategory.HIDDEN_APPS) }
+                        )
+                        SettingsSidebarItem(
                             icon = Icons.Default.Settings,
                             label = "Cài đặt chung",
                             isSelected = selectedCategory == SettingsCategory.GENERAL,
@@ -263,6 +272,9 @@ fun MacSettingsDialog(
                                     customWallpaperUri = customWallpaperUri,
                                     onPickImage = onPickImageFromDevice
                                 )
+                            }
+                            SettingsCategory.HIDDEN_APPS -> {
+                                HiddenAppsSettingsPane(viewModel = viewModel)
                             }
                             SettingsCategory.GENERAL -> {
                                 GeneralSettingsPane(
@@ -412,6 +424,55 @@ private fun GesturesSettingsPane(
                         checked = showLaunchpadGuide,
                         onCheckedChange = { viewModel.toggleLaunchpadGuide(it) },
                         colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007AFF))
+                    )
+                }
+
+                HorizontalDivider(color = Color(0xFF383838), modifier = Modifier.padding(vertical = 8.dp))
+
+                // Switch 5: 2 chạm khóa màn hình (Double Tap to Lock Screen)
+                val doubleTapToLock by viewModel.doubleTapToLock.collectAsState()
+                val context = androidx.compose.ui.platform.LocalContext.current
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("2 chạm khóa màn hình", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Text("Chạm nhanh 2 lần vào màn hình chính để tắt và khóa màn hình", color = Color.Gray, fontSize = 10.5.sp)
+                    }
+                    Switch(
+                        checked = doubleTapToLock,
+                        onCheckedChange = { viewModel.toggleDoubleTapToLock(it) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007AFF))
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .clickable {
+                            try {
+                                val intent = Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                // ignore
+                            }
+                        }
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "⚙️ Thiết lập quyền Trợ năng (Accessibility) để khóa màn hình",
+                        color = Color(0xFF60A5FA),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
@@ -907,5 +968,124 @@ private fun SpecRow(label: String, value: String) {
     ) {
         Text(text = label, color = Color.Gray, fontSize = 11.5.sp)
         Text(text = value, color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+private fun HiddenAppsSettingsPane(viewModel: LauncherViewModel) {
+    val hiddenApps by viewModel.hiddenApps.collectAsState()
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+    ) {
+        Text("Khôi phục ứng dụng đã ẩn", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text("Quản lý và hiện lại các ứng dụng bạn đã ẩn khỏi màn hình Launchpad", color = Color.Gray, fontSize = 11.5.sp)
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        if (hiddenApps.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Đang ẩn ${hiddenApps.size} ứng dụng",
+                    color = Color(0xFFFBBF24),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Button(
+                    onClick = { viewModel.unhideAllApps() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF)),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text("Hiện lại tất cả", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFF282828),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    hiddenApps.forEachIndexed { index, app ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                if (app.iconBitmap != null) {
+                                    Image(
+                                        bitmap = app.iconBitmap,
+                                        contentDescription = app.label,
+                                        modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = app.systemIconFallback ?: Icons.Default.Apps,
+                                        contentDescription = app.label,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                                Column(modifier = Modifier.padding(end = 6.dp)) {
+                                    Text(app.label, color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                                    Text(app.packageName, color = Color.Gray, fontSize = 9.sp, maxLines = 1)
+                                }
+                            }
+
+                            Button(
+                                onClick = { viewModel.unhideApp(app.packageName) },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text("Khôi phục", fontSize = 10.5.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        if (index < hiddenApps.size - 1) {
+                            HorizontalDivider(color = Color(0xFF383838), modifier = Modifier.padding(vertical = 4.dp))
+                        }
+                    }
+                }
+            }
+        } else {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFF282828),
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Visibility,
+                        contentDescription = null,
+                        tint = Color(0xFF10B981),
+                        modifier = Modifier.size(36.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Không có ứng dụng nào bị ẩn", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("Tất cả các ứng dụng đang được hiển thị trên Launchpad.", color = Color.Gray, fontSize = 11.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
+            }
+        }
     }
 }

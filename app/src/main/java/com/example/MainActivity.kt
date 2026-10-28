@@ -1,6 +1,19 @@
 package com.example
 
+import android.content.Intent
 import android.net.Uri
+import android.provider.Settings
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -90,6 +103,8 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
     val reorderTargetApp by viewModel.reorderTargetApp.collectAsState()
     val isBankQrZoomOpen by viewModel.isBankQrZoomOpen.collectAsState()
     val bankQrUri by viewModel.bankQrUri.collectAsState()
+    val isAccessibilityPromptOpen by viewModel.isAccessibilityPromptOpen.collectAsState()
+    val context = LocalContext.current
 
     // Dialog & overlay states
     val isSettingsOpen by viewModel.isSettingsOpen.collectAsState()
@@ -99,12 +114,12 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
     val dockSlotPicker by viewModel.dockSlotPicker.collectAsState()
     val isJiggleMode by viewModel.isJiggleMode.collectAsState()
 
-    // Photo Picker
+    // Photo Picker (Lưu vĩnh viễn vào bộ nhớ máy, không bị mất khi reboot)
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         if (uri != null) {
-            viewModel.setCustomWallpaperUri(uri.toString())
+            viewModel.saveAndSetCustomWallpaper(context, uri)
         }
     }
 
@@ -112,7 +127,7 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         if (uri != null) {
-            viewModel.setBankQrUri(uri.toString())
+            viewModel.saveAndSetBankQr(context, uri)
         }
     }
 
@@ -120,9 +135,11 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
     BackHandler(
         enabled = isLaunchpadOpen || isSettingsOpen || isDesktopContextMenuOpen ||
                 isJiggleMode || isCoffeeOnlineDialogOpen || isFullCalendarDialogOpen ||
-                isGoldPriceDialogOpen || isBankQrZoomOpen || reorderTargetApp != null
+                isGoldPriceDialogOpen || isBankQrZoomOpen || isAccessibilityPromptOpen || reorderTargetApp != null
     ) {
-        if (isBankQrZoomOpen) {
+        if (isAccessibilityPromptOpen) {
+            viewModel.closeAccessibilityPrompt()
+        } else if (isBankQrZoomOpen) {
             viewModel.closeBankQrZoom()
         } else if (reorderTargetApp != null) {
             viewModel.closeReorderDialog()
@@ -227,7 +244,7 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
                     bankQrPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 },
                 onDeleteQr = {
-                    viewModel.setBankQrUri(null)
+                    viewModel.deleteBankQr(context)
                 },
                 onDismiss = { viewModel.closeBankQrZoom() }
             )
@@ -324,6 +341,55 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
         if (isAboutOpen) {
             AboutDialog(
                 onDismiss = { viewModel.closeAboutDialog() }
+            )
+        }
+
+        // Accessibility Service Prompt Dialog (cho tính năng 2 chạm khóa màn hình)
+        if (isAccessibilityPromptOpen) {
+            AlertDialog(
+                onDismissRequest = { viewModel.closeAccessibilityPrompt() },
+                title = {
+                    Text(
+                        text = "Khóa màn hình 2 chạm",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                },
+                text = {
+                    Text(
+                        text = "Để kích hoạt tính năng 2 chạm vào màn hình chính để tắt/khóa màn hình, hệ điều hành Android yêu cầu bạn cấp quyền Dịch vụ Trợ năng (Accessibility Service) cho Launcher trong phần Cài đặt.",
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 13.5.sp
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.closeAccessibilityPrompt()
+                            try {
+                                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                })
+                            } catch (e: Exception) {
+                                // ignore
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Mở Cài đặt Trợ năng", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    OutlinedButton(
+                        onClick = { viewModel.closeAccessibilityPrompt() },
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Để sau", color = Color.White)
+                    }
+                },
+                containerColor = Color(0xFF262626),
+                shape = RoundedCornerShape(18.dp)
             )
         }
     }

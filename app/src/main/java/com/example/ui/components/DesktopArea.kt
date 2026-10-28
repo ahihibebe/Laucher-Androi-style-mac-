@@ -65,9 +65,26 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.rememberAsyncImagePainter
@@ -116,10 +133,7 @@ fun DesktopArea(
     Box(
         modifier = modifier
             .fillMaxSize()
-            // Detect directional drag gestures:
-            // 1. Swipe UP -> All apps / Launchpad
-            // 2. Swipe DOWN -> Expand Notifications panel
-            // 3. Swipe RIGHT / LEFT -> Launchpad
+            // 1. Swipe Gestures (Up = Tất cả ứng dụng, Down = Thông báo, Right = Launchpad)
             .pointerInput(swipeUpForLaunchpad, swipeDownForNotifications, swipeRightForLaunchpad) {
                 detectDragGestures(
                     onDragStart = {
@@ -136,15 +150,13 @@ fun DesktopArea(
                         val absX = abs(dx)
                         val absY = abs(dy)
 
-                        if (absY > absX && absY > 45f) {
-                            // Vertical gestures
-                            if (dy < -45f && swipeUpForLaunchpad) {
+                        if (absY > absX && absY > 50f) {
+                            if (dy < -50f && swipeUpForLaunchpad) {
                                 onNavigateToLaunchpad()
-                            } else if (dy > 45f && swipeDownForNotifications) {
+                            } else if (dy > 50f && swipeDownForNotifications) {
                                 viewModel.expandNotifications(context)
                             }
-                        } else if (absX > absY && absX > 45f) {
-                            // Horizontal gestures (swipe right or swipe left)
+                        } else if (absX > absY && absX > 50f) {
                             if (swipeRightForLaunchpad) {
                                 onNavigateToLaunchpad()
                             }
@@ -158,12 +170,17 @@ fun DesktopArea(
                     }
                 )
             }
-            .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = { /* tap background */ },
-                onLongClick = { viewModel.openDesktopContextMenu() }
-            )
+            // 2. Chạm 2 lần (Double Tap) Khóa màn hình & Nhấn giữ mở Cài đặt nền
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onDoubleTap = {
+                        viewModel.lockScreen(context)
+                    },
+                    onLongPress = {
+                        viewModel.openDesktopContextMenu()
+                    }
+                )
+            }
             .testTag("desktop_background_area")
     ) {
         Column(
@@ -177,10 +194,28 @@ fun DesktopArea(
             val marketPagerState = rememberPagerState(pageCount = { 3 })
 
             val bankQrUri by viewModel.bankQrUri.collectAsState()
+            val bankQrScale by viewModel.bankQrScale.collectAsState()
+            val bankQrFitMode by viewModel.bankQrFitMode.collectAsState()
+            val musicPlaylist by viewModel.musicPlaylist.collectAsState()
             val isMusicPlaying by viewModel.isMusicPlaying.collectAsState()
             val currentTrackIndex by viewModel.currentTrackIndex.collectAsState()
             val musicProgressSeconds by viewModel.musicProgressSeconds.collectAsState()
-            val currentTrack = viewModel.musicPlaylist.getOrNull(currentTrackIndex) ?: viewModel.musicPlaylist[0]
+            val musicScanStatus by viewModel.musicScanStatus.collectAsState()
+            val currentTrack = musicPlaylist.getOrNull(currentTrackIndex) ?: musicPlaylist.firstOrNull() ?: com.example.viewmodel.LauncherMusicTrack("macOS Lo-Fi", "Apple", "03:30")
+
+            // Audio permission launcher for scanning device and SD card music
+            val audioPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                Manifest.permission.READ_MEDIA_AUDIO
+            } else {
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            }
+            val audioPermissionLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestPermission()
+            ) { isGranted ->
+                if (isGranted) {
+                    viewModel.scanDeviceMusic(context)
+                }
+            }
 
             // Symmetrical Cards: Left = QR / Lịch Vạn Niên / Trình Phát Nhạc; Right = Cà phê & Vàng / Giá Xăng / Giá Dầu
             Row(
@@ -328,21 +363,92 @@ fun DesktopArea(
                                             horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
                                             if (bankQrUri != null) {
+                                                // Container QR với khả năng zoom/resize và chuyển chế độ vừa khung
                                                 Surface(
                                                     shape = RoundedCornerShape(10.dp),
                                                     color = Color.White,
                                                     shadowElevation = 4.dp,
                                                     modifier = Modifier
-                                                        .size(92.dp)
+                                                        .size(86.dp)
+                                                        .clip(RoundedCornerShape(10.dp))
                                                         .clickable { viewModel.openBankQrZoom() }
                                                 ) {
-                                                    Image(
-                                                        painter = rememberAsyncImagePainter(model = bankQrUri),
-                                                        contentDescription = "Mã QR ngân hàng",
-                                                        contentScale = ContentScale.Fit,
+                                                    Box(
                                                         modifier = Modifier
                                                             .fillMaxSize()
-                                                            .padding(4.dp)
+                                                            .clip(RoundedCornerShape(10.dp))
+                                                            .padding(2.dp),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Image(
+                                                            painter = rememberAsyncImagePainter(model = bankQrUri),
+                                                            contentDescription = "Mã QR ngân hàng",
+                                                            contentScale = if (bankQrFitMode == "fit") ContentScale.Fit else ContentScale.Crop,
+                                                            modifier = Modifier
+                                                                .fillMaxSize()
+                                                                .graphicsLayer {
+                                                                    scaleX = bankQrScale
+                                                                    scaleY = bankQrScale
+                                                                }
+                                                        )
+                                                    }
+                                                }
+
+                                                // Thanh công cụ Resize & Căn chỉnh ảnh QR vừa khung
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(horizontal = 2.dp),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = "−",
+                                                            color = Color.White,
+                                                            fontSize = 11.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            modifier = Modifier
+                                                                .clip(CircleShape)
+                                                                .background(Color.White.copy(alpha = 0.15f))
+                                                                .clickable { viewModel.setBankQrScale(bankQrScale - 0.1f) }
+                                                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                                                        )
+                                                        Text(
+                                                            text = "${(bankQrScale * 100).toInt()}%",
+                                                            color = Color(0xFF67E8F9),
+                                                            fontSize = 8.sp,
+                                                            fontWeight = FontWeight.Medium,
+                                                            modifier = Modifier
+                                                                .clickable { viewModel.setBankQrScale(1.0f) }
+                                                                .padding(horizontal = 2.dp)
+                                                        )
+                                                        Text(
+                                                            text = "+",
+                                                            color = Color.White,
+                                                            fontSize = 11.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            modifier = Modifier
+                                                                .clip(CircleShape)
+                                                                .background(Color.White.copy(alpha = 0.15f))
+                                                                .clickable { viewModel.setBankQrScale(bankQrScale + 0.1f) }
+                                                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                                                        )
+                                                    }
+
+                                                    Text(
+                                                        text = if (bankQrFitMode == "fit") "Vừa khung" else "Lấp đầy",
+                                                        color = Color(0xFFFBBF24),
+                                                        fontSize = 7.5.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(4.dp))
+                                                            .background(Color.White.copy(alpha = 0.12f))
+                                                            .clickable { viewModel.toggleBankQrFitMode() }
+                                                            .padding(horizontal = 4.dp, vertical = 2.dp)
                                                     )
                                                 }
 
@@ -354,22 +460,22 @@ fun DesktopArea(
                                                     Text(
                                                         text = "🔍 Phóng to",
                                                         color = Color(0xFF60A5FA),
-                                                        fontSize = 8.5.sp,
+                                                        fontSize = 8.sp,
                                                         fontWeight = FontWeight.Medium,
                                                         modifier = Modifier
                                                             .clip(RoundedCornerShape(4.dp))
                                                             .clickable { viewModel.openBankQrZoom() }
-                                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                                                            .padding(horizontal = 4.dp, vertical = 1.5.dp)
                                                     )
                                                     Text(
-                                                        text = "🔄 Đổi ảnh QR",
+                                                        text = "🔄 Đổi ảnh",
                                                         color = Color(0xFFFDE047),
-                                                        fontSize = 8.5.sp,
+                                                        fontSize = 8.sp,
                                                         fontWeight = FontWeight.Medium,
                                                         modifier = Modifier
                                                             .clip(RoundedCornerShape(4.dp))
                                                             .clickable { onPickBankQr() }
-                                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                                                            .padding(horizontal = 4.dp, vertical = 1.5.dp)
                                                     )
                                                 }
                                             } else {
@@ -501,7 +607,7 @@ fun DesktopArea(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                                             ) {
-                                                // Cover Art
+                                                // Cover Art (từ thẻ nhớ/máy hoặc gradient)
                                                 Box(
                                                     modifier = Modifier
                                                         .size(42.dp)
@@ -517,12 +623,21 @@ fun DesktopArea(
                                                         .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(10.dp)),
                                                     contentAlignment = Alignment.Center
                                                 ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.MusicNote,
-                                                        contentDescription = null,
-                                                        tint = Color.White,
-                                                        modifier = Modifier.size(20.dp)
-                                                    )
+                                                    if (currentTrack.albumArtUri != null) {
+                                                        Image(
+                                                            painter = rememberAsyncImagePainter(model = currentTrack.albumArtUri),
+                                                            contentDescription = null,
+                                                            contentScale = ContentScale.Crop,
+                                                            modifier = Modifier.fillMaxSize()
+                                                        )
+                                                    } else {
+                                                        Icon(
+                                                            imageVector = Icons.Default.MusicNote,
+                                                            contentDescription = null,
+                                                            tint = Color.White,
+                                                            modifier = Modifier.size(20.dp)
+                                                        )
+                                                    }
                                                 }
 
                                                 Column(modifier = Modifier.weight(1f)) {
@@ -632,6 +747,39 @@ fun DesktopArea(
                                                         modifier = Modifier.size(17.dp)
                                                     )
                                                 }
+                                            }
+
+                                            // Nút quét nhạc trên máy & thẻ nhớ
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .background(Color.White.copy(alpha = 0.08f))
+                                                    .clickable {
+                                                        val hasPerm = ContextCompat.checkSelfPermission(context, audioPermission) == PackageManager.PERMISSION_GRANTED
+                                                        if (hasPerm) {
+                                                            viewModel.scanDeviceMusic(context)
+                                                        } else {
+                                                            audioPermissionLauncher.launch(audioPermission)
+                                                        }
+                                                    }
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = musicScanStatus ?: "Quét nhạc trên máy & thẻ nhớ",
+                                                    color = Color(0xFF38BDF8),
+                                                    fontSize = 7.5.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    maxLines = 1
+                                                )
+                                                Icon(
+                                                    imageVector = Icons.Default.Refresh,
+                                                    contentDescription = "Quét lại",
+                                                    tint = Color(0xFF38BDF8),
+                                                    modifier = Modifier.size(9.dp)
+                                                )
                                             }
                                         }
                                     }
@@ -750,13 +898,31 @@ fun DesktopArea(
                                         }
                                     }
 
+                                    val isMarketRefreshing by viewModel.isMarketPricesRefreshing.collectAsState()
+                                    val refreshTransition = rememberInfiniteTransition(label = "market_spin")
+                                    val spinAngle by refreshTransition.animateFloat(
+                                        initialValue = 0f,
+                                        targetValue = 360f,
+                                        animationSpec = infiniteRepeatable(
+                                            animation = tween(800, easing = LinearEasing),
+                                            repeatMode = RepeatMode.Restart
+                                        ),
+                                        label = "market_rotation"
+                                    )
+
                                     Icon(
                                         imageVector = Icons.Default.Refresh,
                                         contentDescription = "Cập nhật",
-                                        tint = Color.White.copy(alpha = 0.65f),
+                                        tint = if (isMarketRefreshing) Color(0xFF34D399) else Color.White.copy(alpha = 0.65f),
                                         modifier = Modifier
                                             .size(14.dp)
-                                            .clickable { viewModel.fetchMarketPrices() }
+                                            .graphicsLayer {
+                                                if (isMarketRefreshing) rotationZ = spinAngle
+                                            }
+                                            .clickable {
+                                                viewModel.triggerVibration()
+                                                viewModel.fetchMarketPrices()
+                                            }
                                     )
                                 }
                             }
@@ -802,17 +968,37 @@ fun DesktopArea(
                                                         fontWeight = FontWeight.Bold
                                                     )
                                                 }
+                                                val liveLamDongPrice = marketPrices?.lamDongCoffeePrice ?: "88.500 đ/kg"
+                                                val cleanNum = liveLamDongPrice.replace(" đ/kg", "").trim()
                                                 Text(
-                                                    text = marketPrices?.lamDongCoffeePrice ?: "89.000 đ/kg",
+                                                    text = liveLamDongPrice,
                                                     color = Color(0xFFFBBF24),
                                                     fontSize = 14.sp,
                                                     fontWeight = FontWeight.Bold
                                                 )
                                                 Text(
-                                                    text = "Di Linh: 88.900 | Bảo Lộc: 89.000 đ",
-                                                    color = Color.White.copy(alpha = 0.6f),
+                                                    text = "Di Linh: $cleanNum đ | Bảo Lộc: $cleanNum đ",
+                                                    color = Color.White.copy(alpha = 0.7f),
                                                     fontSize = 8.sp
                                                 )
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                                    modifier = Modifier.padding(top = 1.dp)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(4.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color(0xFF34D399))
+                                                    )
+                                                    Text(
+                                                        text = "Cập nhật: ${marketPrices?.lastUpdated ?: "Thời gian thực"}",
+                                                        color = Color(0xFF34D399),
+                                                        fontSize = 7.5.sp,
+                                                        maxLines = 1
+                                                    )
+                                                }
                                             }
 
                                             // Gold section - click to open full gold prices as requested

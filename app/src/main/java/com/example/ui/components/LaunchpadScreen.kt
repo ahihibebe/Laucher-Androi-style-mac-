@@ -1,5 +1,7 @@
 package com.example.ui.components
 
+import android.net.Uri
+
 import android.app.Activity
 import android.content.Intent
 import android.speech.RecognizerIntent
@@ -49,7 +51,12 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
+import android.provider.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -70,6 +77,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -100,6 +108,48 @@ fun LaunchpadScreen(
     val context = LocalContext.current
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val isJiggleMode by viewModel.isJiggleMode.collectAsState()
+    val appToDelete by viewModel.appToDelete.collectAsState()
+
+    // Dialog xác nhận gỡ cài đặt / xóa ứng dụng
+    if (appToDelete != null) {
+        val targetApp = appToDelete!!
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissDeleteApp() },
+            title = {
+                Text(
+                    text = "Gỡ cài đặt ứng dụng",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            },
+            text = {
+                Text(
+                    text = "Bạn có chắc chắn muốn gỡ cài đặt '" + targetApp.label + "' khỏi thiết bị?",
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = 13.5.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.confirmDeleteApp(context) },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Gỡ cài đặt", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { viewModel.dismissDeleteApp() },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Hủy", color = Color.White)
+                }
+            },
+            containerColor = Color(0xFF262626),
+            shape = RoundedCornerShape(18.dp)
+        )
+    }
 
     // Voice Search Speech Recognizer
     val speechLauncher = rememberLauncherForActivityResult(
@@ -409,7 +459,7 @@ fun LaunchpadScreen(
                                 viewModel.openReorderDialog(app)
                             },
                             onDelete = {
-                                viewModel.uninstallApp(context, app)
+                                viewModel.promptDeleteApp(app)
                             },
                             onHide = {
                                 viewModel.hideApp(app)
@@ -446,8 +496,17 @@ private fun LaunchpadAppItem(
     onHide: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var isMenuOpen by remember { mutableStateOf(false) }
     var totalDragDistance by remember { mutableFloatStateOf(0f) }
+
+    val appShortcuts = remember(app.packageName, isMenuOpen) {
+        if (isMenuOpen) {
+            com.example.util.AppShortcutHelper.getAppShortcuts(context, app.packageName)
+        } else {
+            emptyList()
+        }
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -483,7 +542,7 @@ private fun LaunchpadAppItem(
                     onDragEnd = {
                         val didMove = totalDragDistance > 15f
                         onDragEnd(didMove)
-                        if (!didMove && !isJiggleMode) {
+                        if (!didMove) {
                             isMenuOpen = true
                         }
                     },
@@ -553,17 +612,17 @@ private fun LaunchpadAppItem(
             if (isJiggleMode) {
                 Box(
                     modifier = Modifier
-                        .size(22.dp)
+                        .size(24.dp)
                         .clip(CircleShape)
                         .background(Color(0xFFEF4444))
-                        .clickable { isMenuOpen = true },
+                        .clickable { onDelete() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Tùy chọn",
+                        contentDescription = "Gỡ cài đặt",
                         tint = Color.White,
-                        modifier = Modifier.size(13.dp)
+                        modifier = Modifier.size(14.dp)
                     )
                 }
             }
@@ -582,22 +641,89 @@ private fun LaunchpadAppItem(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Dropdown Menu: Sắp xếp (Di chuyển vị trí), Ẩn, Gỡ cài đặt
+        // Dropdown Menu: App Shortcuts, Thông tin ứng dụng, Sắp xếp, Ẩn, Gỡ cài đặt
         DropdownMenu(
             expanded = isMenuOpen,
             onDismissRequest = { isMenuOpen = false },
             modifier = Modifier.background(Color(0xFF262626))
         ) {
+            // App Shortcuts nếu ứng dụng hỗ trợ
+            if (appShortcuts.isNotEmpty()) {
+                Text(
+                    text = "PHÍM TẮT NHANH",
+                    color = Color(0xFFFBBF24),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp)
+                )
+                appShortcuts.forEach { shortcut ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = shortcut.shortLabel,
+                                color = Color.White,
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        leadingIcon = {
+                            if (shortcut.iconBitmap != null) {
+                                Image(
+                                    bitmap = shortcut.iconBitmap.asImageBitmap(),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp).clip(CircleShape)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.FlashOn,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFBBF24),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        },
+                        onClick = {
+                            isMenuOpen = false
+                            com.example.util.AppShortcutHelper.launchShortcut(context, shortcut)
+                        }
+                    )
+                }
+                HorizontalDivider(color = Color.DarkGray, modifier = Modifier.padding(vertical = 4.dp))
+            }
+
+            // Thông tin ứng dụng (App Info)
+            DropdownMenuItem(
+                text = { Text("Thông tin ứng dụng", color = Color.White, fontSize = 13.sp) },
+                leadingIcon = { Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFF60A5FA), modifier = Modifier.size(17.dp)) },
+                onClick = {
+                    isMenuOpen = false
+                    try {
+                        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = android.net.Uri.parse("package:" + app.packageName)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        // ignore
+                    }
+                }
+            )
+
             // Sắp xếp / Di chuyển vị trí giữa các ứng dụng
             DropdownMenuItem(
-                text = { Text("Sắp xếp (Di chuyển vị trí)", color = Color(0xFF60A5FA), fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold) },
+                text = { Text("Sắp xếp (Di chuyển vị trí)", color = Color(0xFF60A5FA), fontSize = 13.sp, fontWeight = FontWeight.SemiBold) },
                 leadingIcon = { Icon(Icons.Default.SwapHoriz, contentDescription = null, tint = Color(0xFF60A5FA), modifier = Modifier.size(18.dp)) },
                 onClick = {
                     isMenuOpen = false
                     onReorder()
                 }
             )
+
             HorizontalDivider(color = Color.DarkGray)
+
+            // Ẩn ứng dụng khỏi màn hình
             DropdownMenuItem(
                 text = { Text("Ẩn ứng dụng khỏi màn hình", color = Color.White, fontSize = 13.sp) },
                 leadingIcon = { Icon(Icons.Default.VisibilityOff, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(16.dp)) },
@@ -606,6 +732,8 @@ private fun LaunchpadAppItem(
                     onHide()
                 }
             )
+
+            // Gỡ cài đặt (Xóa ứng dụng)
             DropdownMenuItem(
                 text = { Text("Gỡ cài đặt (Xóa ứng dụng)", color = Color(0xFFFF5252), fontSize = 13.sp) },
                 leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFFF5252), modifier = Modifier.size(16.dp)) },

@@ -4,7 +4,12 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.net.Uri
+import com.example.service.MacOsLockAccessibilityService
+import com.example.util.AudioScanner
+import com.example.util.FileStorageHelper
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -48,6 +53,7 @@ enum class SettingsCategory(val title: String) {
     MARKET_PRICES("Giá Cà phê & Vàng"),
     DOCK("Thanh Dock (4 ứng dụng)"),
     WALLPAPER("Hình nền"),
+    HIDDEN_APPS("Ứng dụng đã ẩn"),
     GENERAL("Cài đặt chung"),
     ABOUT("Giới thiệu")
 }
@@ -58,7 +64,9 @@ data class LauncherMusicTrack(
     val durationText: String,
     val totalSeconds: Int = 240,
     val coverGradientStart: Long = 0xFF8B5CF6,
-    val coverGradientEnd: Long = 0xFFEC4899
+    val coverGradientEnd: Long = 0xFFEC4899,
+    val audioUri: String? = null,
+    val albumArtUri: String? = null
 )
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
@@ -108,6 +116,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _marketPrices = MutableStateFlow<MarketPriceReport?>(null)
     val marketPrices: StateFlow<MarketPriceReport?> = _marketPrices.asStateFlow()
 
+    private val _isMarketPricesRefreshing = MutableStateFlow(false)
+    val isMarketPricesRefreshing: StateFlow<Boolean> = _isMarketPricesRefreshing.asStateFlow()
+
     // Preferences states
     private val _showClock = MutableStateFlow(prefs.showClock)
     val showClock: StateFlow<Boolean> = _showClock.asStateFlow()
@@ -142,6 +153,24 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private val _showLaunchpadGuide = MutableStateFlow(prefs.showLaunchpadGuide)
     val showLaunchpadGuide: StateFlow<Boolean> = _showLaunchpadGuide.asStateFlow()
+
+    // 2 Chạm khóa màn hình
+    private val _doubleTapToLock = MutableStateFlow(prefs.doubleTapToLock)
+    val doubleTapToLock: StateFlow<Boolean> = _doubleTapToLock.asStateFlow()
+
+    private val _isAccessibilityPromptOpen = MutableStateFlow(false)
+    val isAccessibilityPromptOpen: StateFlow<Boolean> = _isAccessibilityPromptOpen.asStateFlow()
+
+    // Bank QR Resize & Scale state
+    private val _bankQrScale = MutableStateFlow(prefs.bankQrScale)
+    val bankQrScale: StateFlow<Float> = _bankQrScale.asStateFlow()
+
+    private val _bankQrFitMode = MutableStateFlow(prefs.bankQrFitMode)
+    val bankQrFitMode: StateFlow<String> = _bankQrFitMode.asStateFlow()
+
+    // Gỡ cài đặt / Xóa ứng dụng confirmation state
+    private val _appToDelete = MutableStateFlow<AppInfo?>(null)
+    val appToDelete: StateFlow<AppInfo?> = _appToDelete.asStateFlow()
 
     // 4 Dock apps
     private val _dockApps = MutableStateFlow<List<AppInfo>>(emptyList())
@@ -190,8 +219,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _isBankQrZoomOpen = MutableStateFlow(false)
     val isBankQrZoomOpen: StateFlow<Boolean> = _isBankQrZoomOpen.asStateFlow()
 
-    // Trình phát nhạc macOS (Ô 3: Music player widget)
-    val musicPlaylist = listOf(
+    // Trình phát nhạc macOS (Ô 3: Music player widget) & Quét nhạc máy/thẻ
+    private val initialDemoPlaylist = listOf(
         LauncherMusicTrack("Diễm Xưa", "Trịnh Công Sơn", "04:15", 255, 0xFFE11D48, 0xFFFB7185),
         LauncherMusicTrack("Hạ Trắng", "Trịnh Công Sơn", "04:42", 282, 0xFF8B5CF6, 0xFFC084FC),
         LauncherMusicTrack("Nắng Thủy Tinh", "Trịnh Công Sơn", "03:58", 238, 0xFFF59E0B, 0xFFFDE047),
@@ -199,14 +228,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         LauncherMusicTrack("macOS Lo-Fi Chill", "Apple Acoustic", "03:30", 210, 0xFF3B82F6, 0xFF60A5FA)
     )
 
+    private val _musicPlaylist = MutableStateFlow<List<LauncherMusicTrack>>(initialDemoPlaylist)
+    val musicPlaylist: StateFlow<List<LauncherMusicTrack>> = _musicPlaylist.asStateFlow()
+
     private val _isMusicPlaying = MutableStateFlow(false)
     val isMusicPlaying: StateFlow<Boolean> = _isMusicPlaying.asStateFlow()
 
     private val _currentTrackIndex = MutableStateFlow(0)
     val currentTrackIndex: StateFlow<Int> = _currentTrackIndex.asStateFlow()
 
-    private val _musicProgressSeconds = MutableStateFlow(45)
+    private val _musicProgressSeconds = MutableStateFlow(0)
     val musicProgressSeconds: StateFlow<Int> = _musicProgressSeconds.asStateFlow()
+
+    private val _musicScanStatus = MutableStateFlow<String?>("Chạm để quét nhạc trên máy & thẻ nhớ")
+    val musicScanStatus: StateFlow<String?> = _musicScanStatus.asStateFlow()
+
+    private var mediaPlayer: MediaPlayer? = null
 
     init {
         loadInstalledApps()
@@ -216,19 +253,34 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private fun startClockTicker() {
         viewModelScope.launch(Dispatchers.Default) {
+            var tickerSeconds = 0
             while (true) {
                 _currentTime.value = Calendar.getInstance()
                 _currentLunarDate.value = LunarCalendarHelper.getTodayLunarDate()
 
                 if (_isMusicPlaying.value) {
-                    val currentTrack = musicPlaylist.getOrNull(_currentTrackIndex.value)
-                    val totalSec = currentTrack?.totalSeconds ?: 240
-                    if (_musicProgressSeconds.value >= totalSec) {
-                        _currentTrackIndex.value = (_currentTrackIndex.value + 1) % musicPlaylist.size
-                        _musicProgressSeconds.value = 0
+                    val player = mediaPlayer
+                    if (player != null && player.isPlaying) {
+                        try {
+                            _musicProgressSeconds.value = (player.currentPosition / 1000).coerceAtLeast(0)
+                        } catch (e: Exception) {
+                            // ignore
+                        }
                     } else {
-                        _musicProgressSeconds.value += 1
+                        val currentTrack = _musicPlaylist.value.getOrNull(_currentTrackIndex.value)
+                        val totalSec = currentTrack?.totalSeconds ?: 240
+                        if (_musicProgressSeconds.value >= totalSec) {
+                            nextMusicTrack()
+                        } else {
+                            _musicProgressSeconds.value += 1
+                        }
                     }
+                }
+
+                tickerSeconds++
+                // Tự động cập nhật giá thị trường (cà phê Lâm Đồng, vàng, xăng dầu) mỗi 60 giây theo thời gian thực
+                if (tickerSeconds % 60 == 0) {
+                    fetchMarketPrices()
                 }
 
                 delay(1000)
@@ -237,12 +289,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun fetchMarketPrices() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isMarketPricesRefreshing.value = true
             try {
                 val data = marketRepo.getLatestMarketPrices()
                 _marketPrices.value = data
             } catch (e: Exception) {
                 // Ignore
+            } finally {
+                _isMarketPricesRefreshing.value = false
             }
         }
     }
@@ -289,24 +344,159 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _isBankQrZoomOpen.value = false
     }
 
-    // Music Player controls
-    fun toggleMusicPlayPause() {
-        _isMusicPlaying.value = !_isMusicPlaying.value
+    // 2 Chạm khóa màn hình
+    fun toggleDoubleTapToLock(enabled: Boolean) {
+        prefs.doubleTapToLock = enabled
+        _doubleTapToLock.value = enabled
         triggerVibration()
     }
 
-    fun nextMusicTrack() {
-        _currentTrackIndex.value = (_currentTrackIndex.value + 1) % musicPlaylist.size
+    fun lockScreen(context: Context) {
+        if (!_doubleTapToLock.value) return
+        triggerVibration()
+        val success = MacOsLockAccessibilityService.lockScreen()
+        if (!success) {
+            _isAccessibilityPromptOpen.value = true
+        }
+    }
+
+    fun closeAccessibilityPrompt() {
+        _isAccessibilityPromptOpen.value = false
+    }
+
+    // Bank QR Resize & Scale controls
+    fun setBankQrScale(scale: Float) {
+        val clamped = scale.coerceIn(0.6f, 2.0f)
+        _bankQrScale.value = clamped
+        prefs.bankQrScale = clamped
+    }
+
+    fun toggleBankQrFitMode() {
+        val newMode = if (_bankQrFitMode.value == "fit") "crop" else "fit"
+        _bankQrFitMode.value = newMode
+        prefs.bankQrFitMode = newMode
+        triggerVibration()
+    }
+
+    // Music Player controls & MediaStore Audio Scanning
+    fun scanDeviceMusic(context: Context) {
+        triggerVibration()
+        _musicScanStatus.value = "Đang quét nhạc trên bộ nhớ máy & thẻ nhớ..."
+        viewModelScope.launch {
+            try {
+                val scanned = AudioScanner.scanLocalAudio(context)
+                if (scanned.isNotEmpty()) {
+                    _musicPlaylist.value = scanned
+                    _currentTrackIndex.value = 0
+                    _musicProgressSeconds.value = 0
+                    _musicScanStatus.value = "Đã quét ${scanned.size} bài hát từ máy & thẻ nhớ"
+                    stopMediaPlayer()
+                } else {
+                    _musicScanStatus.value = "Không tìm thấy file nhạc (.mp3, .m4a) trên máy/thẻ nhớ"
+                }
+            } catch (e: Exception) {
+                _musicScanStatus.value = "Lỗi khi quét nhạc: ${e.message}"
+            }
+        }
+    }
+
+    private fun playTrackAtIndex(index: Int) {
+        val tracks = _musicPlaylist.value
+        if (tracks.isEmpty()) return
+        val clampedIndex = index.coerceIn(0, tracks.size - 1)
+        _currentTrackIndex.value = clampedIndex
         _musicProgressSeconds.value = 0
-        _isMusicPlaying.value = true
+        val track = tracks[clampedIndex]
+
+        stopMediaPlayer()
+
+        if (track.audioUri != null) {
+            try {
+                val player = MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .build()
+                    )
+                    setDataSource(getApplication(), Uri.parse(track.audioUri))
+                    prepare()
+                    start()
+                    setOnCompletionListener {
+                        nextMusicTrack()
+                    }
+                }
+                mediaPlayer = player
+                _isMusicPlaying.value = true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _isMusicPlaying.value = true
+            }
+        } else {
+            _isMusicPlaying.value = true
+        }
+    }
+
+    private fun stopMediaPlayer() {
+        try {
+            mediaPlayer?.stop()
+            mediaPlayer?.release()
+        } catch (e: Exception) {
+            // ignore
+        }
+        mediaPlayer = null
+    }
+
+    fun toggleMusicPlayPause() {
+        triggerVibration()
+        val player = mediaPlayer
+        if (player != null) {
+            if (player.isPlaying) {
+                player.pause()
+                _isMusicPlaying.value = false
+            } else {
+                player.start()
+                _isMusicPlaying.value = true
+            }
+        } else {
+            if (!_isMusicPlaying.value) {
+                playTrackAtIndex(_currentTrackIndex.value)
+            } else {
+                _isMusicPlaying.value = false
+            }
+        }
+    }
+
+    fun nextMusicTrack() {
+        val listSize = _musicPlaylist.value.size
+        if (listSize == 0) return
+        val nextIdx = (_currentTrackIndex.value + 1) % listSize
+        playTrackAtIndex(nextIdx)
         triggerVibration()
     }
 
     fun prevMusicTrack() {
-        _currentTrackIndex.value = if (_currentTrackIndex.value > 0) _currentTrackIndex.value - 1 else musicPlaylist.size - 1
-        _musicProgressSeconds.value = 0
-        _isMusicPlaying.value = true
+        val listSize = _musicPlaylist.value.size
+        if (listSize == 0) return
+        val prevIdx = if (_currentTrackIndex.value > 0) _currentTrackIndex.value - 1 else listSize - 1
+        playTrackAtIndex(prevIdx)
         triggerVibration()
+    }
+
+    // Gỡ cài đặt / Xóa ứng dụng
+    fun promptDeleteApp(app: AppInfo) {
+        triggerVibration()
+        _appToDelete.value = app
+    }
+
+    fun dismissDeleteApp() {
+        _appToDelete.value = null
+    }
+
+    fun confirmDeleteApp(context: Context) {
+        val app = _appToDelete.value ?: return
+        _appToDelete.value = null
+        uninstallApp(context, app)
     }
 
     fun openLaunchpad() {
@@ -482,27 +672,56 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         triggerVibration()
     }
 
+    val hiddenApps: StateFlow<List<AppInfo>> = combine(_installedApps, _hiddenPackages) { apps, hidden ->
+        apps.filter { hidden.contains(it.packageName) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun unhideApp(packageName: String) {
+        prefs.unhidePackage(packageName)
+        _hiddenPackages.value = prefs.hiddenPackages
+        triggerVibration()
+    }
+
     fun unhideAllApps() {
         prefs.unhideAll()
         _hiddenPackages.value = emptySet()
+        triggerVibration()
     }
 
     fun uninstallApp(context: Context, app: AppInfo) {
+        triggerVibration()
+        // If it is a virtual action app, hide/delete it immediately from list
+        if (app.packageName.startsWith("action:")) {
+            hideApp(app)
+            return
+        }
+
         try {
             val intent = Intent(Intent.ACTION_DELETE).apply {
                 data = Uri.parse("package:${app.packageName}")
+                putExtra(Intent.EXTRA_RETURN_RESULT, true)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
         } catch (e: Exception) {
             try {
-                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
                     data = Uri.parse("package:${app.packageName}")
+                    putExtra(Intent.EXTRA_RETURN_RESULT, true)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 context.startActivity(intent)
             } catch (e2: Exception) {
-                // Ignore
+                try {
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.parse("package:${app.packageName}")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                } catch (e3: Exception) {
+                    // Fallback: hide if system or cannot delete
+                    hideApp(app)
+                }
             }
         }
     }
@@ -644,6 +863,29 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setCustomWallpaperUri(uriString: String?) {
         _customWallpaperUri.value = uriString
         prefs.customWallpaperUri = uriString
+    }
+
+    fun saveAndSetCustomWallpaper(context: Context, uri: Uri) {
+        val savedPath = FileStorageHelper.saveUriToInternalStorage(context, uri, "saved_wallpaper.jpg")
+        val finalPath = savedPath ?: uri.toString()
+        _customWallpaperUri.value = finalPath
+        prefs.customWallpaperUri = finalPath
+        triggerVibration()
+    }
+
+    fun saveAndSetBankQr(context: Context, uri: Uri) {
+        val savedPath = FileStorageHelper.saveUriToInternalStorage(context, uri, "saved_bank_qr.jpg")
+        val finalPath = savedPath ?: uri.toString()
+        _bankQrUri.value = finalPath
+        prefs.bankQrUri = finalPath
+        triggerVibration()
+    }
+
+    fun deleteBankQr(context: Context) {
+        FileStorageHelper.deleteInternalFile(context, "saved_bank_qr.jpg")
+        _bankQrUri.value = null
+        prefs.bankQrUri = null
+        triggerVibration()
     }
 
     fun openDockSlotPicker(slot: Int) {
