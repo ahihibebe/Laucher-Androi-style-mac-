@@ -52,6 +52,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
 private const val COFFEE_ONLINE_URL = "https://giacaphe.com/gia-ca-phe-truc-tuyen/"
+private const val PEPPER_ONLINE_URL = "https://giacaphe.com/gia-tieu-noi-dia/"
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -61,6 +62,9 @@ fun CoffeeOnlineDialog(
     val context = LocalContext.current
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var selectedTab by remember { mutableStateOf(0) } // 0 = Cà phê, 1 = Giá tiêu
+
+    val currentUrl = if (selectedTab == 0) COFFEE_ONLINE_URL else PEPPER_ONLINE_URL
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -82,7 +86,7 @@ fun CoffeeOnlineDialog(
                 .testTag("coffee_online_dialog")
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // macOS Title Bar with Traffic Lights
+                // macOS Title Bar with Traffic Lights & Tab Switcher
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -119,13 +123,53 @@ fun CoffeeOnlineDialog(
                         )
                     }
 
-                    // Window Title
-                    Text(
-                        text = "Giá Cà Phê Trực Tuyến - Lâm Đồng",
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    // Window Tabs (Cà phê vs Giá tiêu)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (selectedTab == 0) Color(0xFF3B82F6).copy(alpha = 0.35f) else Color.Transparent,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    if (selectedTab != 0) {
+                                        selectedTab = 0
+                                        webViewInstance?.loadUrl(COFFEE_ONLINE_URL)
+                                    }
+                                }
+                        ) {
+                            Text(
+                                text = "☕ Giá Cà Phê",
+                                color = if (selectedTab == 0) Color(0xFF60A5FA) else Color.White.copy(alpha = 0.6f),
+                                fontSize = 11.5.sp,
+                                fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (selectedTab == 1) Color(0xFF10B981).copy(alpha = 0.35f) else Color.Transparent,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    if (selectedTab != 1) {
+                                        selectedTab = 1
+                                        webViewInstance?.loadUrl(PEPPER_ONLINE_URL)
+                                    }
+                                }
+                        ) {
+                            Text(
+                                text = "🌱 Giá Tiêu",
+                                color = if (selectedTab == 1) Color(0xFF34D399) else Color.White.copy(alpha = 0.6f),
+                                fontSize = 11.5.sp,
+                                fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
 
                     // Actions
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -144,7 +188,7 @@ fun CoffeeOnlineDialog(
                         IconButton(
                             onClick = {
                                 try {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(COFFEE_ONLINE_URL)).apply {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(currentUrl)).apply {
                                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     }
                                     context.startActivity(intent)

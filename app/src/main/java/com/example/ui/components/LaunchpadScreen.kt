@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -43,6 +44,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.BookmarkRemove
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -464,6 +468,11 @@ fun LaunchpadScreen(
                             onHide = {
                                 viewModel.hideApp(app)
                             },
+                            isPinnedToDesktop = viewModel.isAppPinnedToDesktop(app.packageName),
+                            badgeCount = viewModel.getBadgeCount(app.packageName),
+                            onTogglePinToDesktop = {
+                                viewModel.togglePinAppToDesktop(app.packageName)
+                            },
                             modifier = if (!isDraggingThis) {
                                 Modifier.animateItemPlacement()
                             } else {
@@ -494,6 +503,9 @@ private fun LaunchpadAppItem(
     onReorder: () -> Unit,
     onDelete: () -> Unit,
     onHide: () -> Unit,
+    isPinnedToDesktop: Boolean = false,
+    badgeCount: Int = 0,
+    onTogglePinToDesktop: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -609,6 +621,25 @@ private fun LaunchpadAppItem(
                 }
             }
 
+            // Notification Badge kèm số khi có thông báo
+            if (badgeCount > 0 && !isJiggleMode) {
+                Box(
+                    modifier = Modifier
+                        .offset(x = 6.dp, y = (-4).dp)
+                        .background(Color(0xFFFF3B30), CircleShape)
+                        .border(1.5.dp, Color.White, CircleShape)
+                        .padding(horizontal = if (badgeCount > 9) 4.5.dp else 2.5.dp, vertical = 0.5.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (badgeCount > 99) "99+" else badgeCount.toString(),
+                        color = Color.White,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
             if (isJiggleMode) {
                 Box(
                     modifier = Modifier
@@ -692,6 +723,30 @@ private fun LaunchpadAppItem(
                 }
                 HorizontalDivider(color = Color.DarkGray, modifier = Modifier.padding(vertical = 4.dp))
             }
+
+            // Thêm vào màn hình chính / Xóa khỏi màn hình chính
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (isPinnedToDesktop) "Xóa khỏi màn hình chính" else "Thêm vào màn hình chính",
+                        color = if (isPinnedToDesktop) Color(0xFFF87171) else Color(0xFF34D399),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = if (isPinnedToDesktop) Icons.Default.BookmarkRemove else Icons.Default.BookmarkAdd,
+                        contentDescription = null,
+                        tint = if (isPinnedToDesktop) Color(0xFFF87171) else Color(0xFF34D399),
+                        modifier = Modifier.size(17.dp)
+                    )
+                },
+                onClick = {
+                    isMenuOpen = false
+                    onTogglePinToDesktop()
+                }
+            )
 
             // Thông tin ứng dụng (App Info)
             DropdownMenuItem(

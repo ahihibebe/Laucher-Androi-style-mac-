@@ -28,6 +28,8 @@ data class MarketPriceReport(
     val averageCoffeePrice: String,
     val lamDongCoffeePrice: String,
     val lamDongDistricts: List<CoffeePrice>,
+    val pepperPrice: String = "140.000 đ/kg",
+    val pepperChange: String = "0 đ/kg",
     val goldPrices: List<GoldPrice>,
     val petrolPrices: List<PetrolPrice>,
     val oilPrices: List<PetrolPrice> = emptyList(),

@@ -2,14 +2,17 @@ package com.example.viewmodel
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.net.Uri
 import com.example.service.MacOsLockAccessibilityService
 import com.example.util.AudioScanner
 import com.example.util.FileStorageHelper
+import com.example.util.NotificationBadgeManager
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -84,6 +87,43 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val hiddenPackages: StateFlow<Set<String>> = _hiddenPackages.asStateFlow()
 
     private val _customAppOrder = MutableStateFlow(prefs.appOrder)
+
+    private val _desktopPinnedPackages = MutableStateFlow(prefs.desktopPinnedApps)
+    val desktopPinnedApps: StateFlow<List<AppInfo>> = combine(_installedApps, _desktopPinnedPackages) { apps, pinned ->
+        pinned.mapNotNull { pkg -> apps.find { it.packageName == pkg } }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val notificationCounts: StateFlow<Map<String, Int>> = NotificationBadgeManager.notificationCounts
+
+    fun getBadgeCount(packageName: String): Int = NotificationBadgeManager.getBadgeCount(packageName)
+
+    fun isAppPinnedToDesktop(packageName: String): Boolean {
+        return _desktopPinnedPackages.value.contains(packageName)
+    }
+
+    fun togglePinAppToDesktop(packageName: String) {
+        triggerVibration()
+        val current = _desktopPinnedPackages.value.toMutableList()
+        if (current.contains(packageName)) {
+            current.remove(packageName)
+        } else {
+            current.add(packageName)
+        }
+        _desktopPinnedPackages.value = current
+        prefs.desktopPinnedApps = current
+    }
+
+    fun pinAppToDesktop(packageName: String) {
+        if (!_desktopPinnedPackages.value.contains(packageName)) {
+            togglePinAppToDesktop(packageName)
+        }
+    }
+
+    fun unpinAppFromDesktop(packageName: String) {
+        if (_desktopPinnedPackages.value.contains(packageName)) {
+            togglePinAppToDesktop(packageName)
+        }
+    }
 
     val filteredApps: StateFlow<List<AppInfo>> = combine(_installedApps, _searchQuery, _hiddenPackages, _customAppOrder) { apps, query, hidden, order ->
         val visibleApps = apps.filter { !hidden.contains(it.packageName) }
@@ -220,15 +260,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val isBankQrZoomOpen: StateFlow<Boolean> = _isBankQrZoomOpen.asStateFlow()
 
     // Trình phát nhạc macOS (Ô 3: Music player widget) & Quét nhạc máy/thẻ
-    private val initialDemoPlaylist = listOf(
-        LauncherMusicTrack("Diễm Xưa", "Trịnh Công Sơn", "04:15", 255, 0xFFE11D48, 0xFFFB7185),
-        LauncherMusicTrack("Hạ Trắng", "Trịnh Công Sơn", "04:42", 282, 0xFF8B5CF6, 0xFFC084FC),
-        LauncherMusicTrack("Nắng Thủy Tinh", "Trịnh Công Sơn", "03:58", 238, 0xFFF59E0B, 0xFFFDE047),
-        LauncherMusicTrack("Biển Nhớ", "Trịnh Công Sơn", "04:20", 260, 0xFF0D9488, 0xFF2DD4BF),
-        LauncherMusicTrack("macOS Lo-Fi Chill", "Apple Acoustic", "03:30", 210, 0xFF3B82F6, 0xFF60A5FA)
-    )
-
-    private val _musicPlaylist = MutableStateFlow<List<LauncherMusicTrack>>(initialDemoPlaylist)
+    private val _musicPlaylist = MutableStateFlow<List<LauncherMusicTrack>>(emptyList())
     val musicPlaylist: StateFlow<List<LauncherMusicTrack>> = _musicPlaylist.asStateFlow()
 
     private val _isMusicPlaying = MutableStateFlow(false)
@@ -240,15 +272,102 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _musicProgressSeconds = MutableStateFlow(0)
     val musicProgressSeconds: StateFlow<Int> = _musicProgressSeconds.asStateFlow()
 
-    private val _musicScanStatus = MutableStateFlow<String?>("Chạm để quét nhạc trên máy & thẻ nhớ")
+    private val _musicScanStatus = MutableStateFlow<String?>("Chưa quét nhạc. Chạm để quét nhạc trên máy & thẻ nhớ")
     val musicScanStatus: StateFlow<String?> = _musicScanStatus.asStateFlow()
 
     private var mediaPlayer: MediaPlayer? = null
+
+    private val packageReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val action = intent?.action ?: return
+            val packageName = intent.data?.schemeSpecificPart
+            when (action) {
+                Intent.ACTION_PACKAGE_REMOVED,
+                Intent.ACTION_PACKAGE_FULLY_REMOVED -> {
+                    val isReplacing = intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)
+                    if (!isReplacing && packageName != null) {
+                        onPackageRemoved(packageName)
+                    }
+                }
+                Intent.ACTION_PACKAGE_ADDED -> {
+                    val isReplacing = intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)
+                    if (!isReplacing && packageName != null) {
+                        loadInstalledApps()
+                    }
+                }
+                Intent.ACTION_PACKAGE_REPLACED,
+                Intent.ACTION_PACKAGE_CHANGED -> {
+                    loadInstalledApps()
+                }
+            }
+        }
+    }
+
+    private fun onPackageRemoved(packageName: String) {
+        // Xóa ngay lập tức khỏi danh sách ứng dụng đã cài đặt
+        _installedApps.value = _installedApps.value.filter { it.packageName != packageName }
+
+        // Xóa khỏi thứ tự tùy biến
+        val currentOrder = _customAppOrder.value.toMutableList()
+        if (currentOrder.remove(packageName)) {
+            _customAppOrder.value = currentOrder
+            prefs.appOrder = currentOrder
+        }
+
+        // Xóa khỏi danh sách ghim trên màn hình chính
+        val currentPinned = _desktopPinnedPackages.value.toMutableList()
+        if (currentPinned.remove(packageName)) {
+            _desktopPinnedPackages.value = currentPinned
+            prefs.desktopPinnedApps = currentPinned
+        }
+
+        // Xóa khỏi danh sách ẩn
+        val currentHidden = _hiddenPackages.value.toMutableSet()
+        if (currentHidden.remove(packageName)) {
+            _hiddenPackages.value = currentHidden
+            prefs.hiddenPackages = currentHidden
+        }
+
+        // Cập nhật lại thanh Dock nếu ứng dụng bị xóa nằm trên Dock
+        refreshDockApps(_installedApps.value)
+    }
 
     init {
         loadInstalledApps()
         startClockTicker()
         fetchMarketPrices()
+        registerPackageReceiver()
+    }
+
+    private fun registerPackageReceiver() {
+        try {
+            val filter = IntentFilter().apply {
+                addAction(Intent.ACTION_PACKAGE_ADDED)
+                addAction(Intent.ACTION_PACKAGE_REMOVED)
+                addAction(Intent.ACTION_PACKAGE_FULLY_REMOVED)
+                addAction(Intent.ACTION_PACKAGE_REPLACED)
+                addAction(Intent.ACTION_PACKAGE_CHANGED)
+                addDataScheme("package")
+            }
+            val app = getApplication<Application>()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                app.registerReceiver(packageReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                app.registerReceiver(packageReceiver, filter)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        try {
+            getApplication<Application>().unregisterReceiver(packageReceiver)
+        } catch (e: Exception) {
+            // ignore
+        }
+        stopMediaPlayer()
     }
 
     private fun startClockTicker() {
@@ -866,7 +985,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun saveAndSetCustomWallpaper(context: Context, uri: Uri) {
-        val savedPath = FileStorageHelper.saveUriToInternalStorage(context, uri, "saved_wallpaper.jpg")
+        val savedPath = FileStorageHelper.saveUriToInternalStorage(context, uri, "saved_wallpaper")
         val finalPath = savedPath ?: uri.toString()
         _customWallpaperUri.value = finalPath
         prefs.customWallpaperUri = finalPath
@@ -874,7 +993,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun saveAndSetBankQr(context: Context, uri: Uri) {
-        val savedPath = FileStorageHelper.saveUriToInternalStorage(context, uri, "saved_bank_qr.jpg")
+        val savedPath = FileStorageHelper.saveUriToInternalStorage(context, uri, "saved_bank_qr")
         val finalPath = savedPath ?: uri.toString()
         _bankQrUri.value = finalPath
         prefs.bankQrUri = finalPath
@@ -882,7 +1001,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun deleteBankQr(context: Context) {
-        FileStorageHelper.deleteInternalFile(context, "saved_bank_qr.jpg")
+        FileStorageHelper.deleteInternalFile(context, "saved_bank_qr")
         _bankQrUri.value = null
         prefs.bankQrUri = null
         triggerVibration()

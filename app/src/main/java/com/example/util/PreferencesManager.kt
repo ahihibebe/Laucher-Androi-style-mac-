@@ -29,6 +29,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_DOUBLE_TAP_LOCK = "double_tap_to_lock"
         private const val KEY_BANK_QR_SCALE = "bank_qr_scale"
         private const val KEY_BANK_QR_FIT_MODE = "bank_qr_fit_mode"
+        private const val KEY_DESKTOP_PINNED_APPS = "desktop_pinned_apps"
     }
 
     var bankQrUri: String?
@@ -102,6 +103,15 @@ class PreferencesManager(context: Context) {
         }
         set(value) {
             prefs.edit().putString(KEY_APP_ORDER, value.joinToString(",")).apply()
+        }
+
+    var desktopPinnedApps: List<String>
+        get() {
+            val raw = prefs.getString(KEY_DESKTOP_PINNED_APPS, "") ?: ""
+            return if (raw.isBlank()) emptyList() else raw.split(",").filter { it.isNotBlank() }
+        }
+        set(value) {
+            prefs.edit().putString(KEY_DESKTOP_PINNED_APPS, value.joinToString(",")).apply()
         }
 
     fun hidePackage(pkg: String) {

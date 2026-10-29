@@ -40,7 +40,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.runtime.remember
 import coil.compose.rememberAsyncImagePainter
+import coil.request.CachePolicy
+import coil.request.ImageRequest
+import java.io.File
 import com.example.ui.components.AboutDialog
 import com.example.ui.components.BankQrZoomDialog
 import com.example.ui.components.CoffeeOnlineDialog
@@ -163,8 +167,17 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
     Box(modifier = Modifier.fillMaxSize()) {
         // Wallpaper: Custom device photo or macOS preset
         if (customWallpaperUri != null) {
+            val context = LocalContext.current
+            val wallpaperModel = remember(customWallpaperUri) {
+                ImageRequest.Builder(context)
+                    .data(File(customWallpaperUri))
+                    .crossfade(true)
+                    .memoryCachePolicy(CachePolicy.DISABLED)
+                    .diskCachePolicy(CachePolicy.DISABLED)
+                    .build()
+            }
             Image(
-                painter = rememberAsyncImagePainter(model = customWallpaperUri),
+                painter = rememberAsyncImagePainter(model = wallpaperModel),
                 contentDescription = "Hình nền thiết bị",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()

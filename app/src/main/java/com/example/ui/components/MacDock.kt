@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -90,9 +91,11 @@ fun MacDock(
                 // Exactly 4 App Slots
                 for (slotIndex in 0..3) {
                     val app = dockApps.getOrNull(slotIndex)
+                    val badgeCount = if (app != null) viewModel.getBadgeCount(app.packageName) else 0
                     DockItem(
                         slotIndex = slotIndex,
                         app = app,
+                        badgeCount = badgeCount,
                         onLaunch = { appToLaunch ->
                             viewModel.launchApp(context, appToLaunch)
                         },
@@ -111,6 +114,7 @@ fun MacDock(
 private fun DockItem(
     slotIndex: Int,
     app: AppInfo?,
+    badgeCount: Int,
     onLaunch: (AppInfo) -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -140,16 +144,17 @@ private fun DockItem(
             )
             .testTag("dock_slot_$slotIndex")
     ) {
-            val backgroundModifier = if (app?.iconBitmap != null) {
-                Modifier.background(Color.Transparent)
-            } else {
-                Modifier.background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xFF3B82F6), Color(0xFF1D4ED8))
-                    )
+        val backgroundModifier = if (app?.iconBitmap != null) {
+            Modifier.background(Color.Transparent)
+        } else {
+            Modifier.background(
+                Brush.verticalGradient(
+                    listOf(Color(0xFF3B82F6), Color(0xFF1D4ED8))
                 )
-            }
+            )
+        }
 
+        Box(contentAlignment = Alignment.TopEnd) {
             // Translucent frosted glass frame for each dock icon
             Surface(
                 shape = RoundedCornerShape(16.dp),
@@ -199,5 +204,25 @@ private fun DockItem(
                     }
                 }
             }
+
+            // Notification Badge kèm số khi có thông báo
+            if (badgeCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .offset(x = 6.dp, y = (-4).dp)
+                        .background(Color(0xFFFF3B30), CircleShape)
+                        .border(1.5.dp, Color.White, CircleShape)
+                        .padding(horizontal = if (badgeCount > 9) 4.5.dp else 2.5.dp, vertical = 0.5.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (badgeCount > 99) "99+" else badgeCount.toString(),
+                        color = Color.White,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
     }
 }

@@ -30,6 +30,8 @@ class MarketPriceRepository {
         var dakNongPrice = "89.300 đ/kg"
         var avgCoffee = "89.100 đ/kg"
         var coffeeChange = "+200"
+        var pepperPrice = "140.000 đ/kg"
+        var pepperChange = "0 đ/kg"
         var lastUpdatedTime = now
 
         val headers = mapOf(
@@ -186,11 +188,33 @@ class MarketPriceRepository {
             PetrolPrice("Dầu Mazút 180CST 3.5S", "15.820 đ/kg", "16.130 đ/kg", "16.450 đ/kg", "+90 đ/kg")
         )
 
+        // 4. Fetch giá hồ tiêu từ https://giacaphe.com/gia-tieu-noi-dia/
+        try {
+            val reqBuilder = Request.Builder().url("https://giacaphe.com/gia-tieu-noi-dia/")
+            headers.forEach { (k, v) -> reqBuilder.header(k, v) }
+            val res = client.newCall(reqBuilder.build()).execute()
+            if (res.isSuccessful) {
+                val html = res.body?.string() ?: ""
+                val topMatch = Regex("""cao nhất\s*([0-9]{2,3}[.,][0-9]{3})""", RegexOption.IGNORE_CASE).find(html)
+                if (topMatch != null) {
+                    pepperPrice = topMatch.groupValues[1].replace(",", ".") + " đ/kg"
+                }
+                val changeMatch = Regex("""(không thay đổi\s*0|tăng\s*[0-9]+|giảm\s*[0-9]+)""", RegexOption.IGNORE_CASE).find(html)
+                if (changeMatch != null) {
+                    pepperChange = changeMatch.groupValues[1]
+                }
+            }
+        } catch (e: Exception) {
+            // ignore
+        }
+
         MarketPriceReport(
             coffeePrices = coffeeList,
             averageCoffeePrice = avgCoffee,
             lamDongCoffeePrice = lamDongPrice,
             lamDongDistricts = lamDongDistrictsList,
+            pepperPrice = pepperPrice,
+            pepperChange = pepperChange,
             goldPrices = fullGoldList,
             petrolPrices = petrolList,
             oilPrices = oilList,

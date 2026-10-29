@@ -90,8 +90,21 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.rememberAsyncImagePainter
 import com.example.model.LunarDate
 import com.example.model.MarketPriceReport
+import com.example.model.AppInfo
 import com.example.viewmodel.LauncherViewModel
 import com.example.viewmodel.SettingsCategory
+import android.content.Intent
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.filled.BookmarkRemove
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.runtime.mutableStateOf
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -201,7 +214,7 @@ fun DesktopArea(
             val currentTrackIndex by viewModel.currentTrackIndex.collectAsState()
             val musicProgressSeconds by viewModel.musicProgressSeconds.collectAsState()
             val musicScanStatus by viewModel.musicScanStatus.collectAsState()
-            val currentTrack = musicPlaylist.getOrNull(currentTrackIndex) ?: musicPlaylist.firstOrNull() ?: com.example.viewmodel.LauncherMusicTrack("macOS Lo-Fi", "Apple", "03:30")
+            val currentTrack = musicPlaylist.getOrNull(currentTrackIndex) ?: musicPlaylist.firstOrNull()
 
             // Audio permission launcher for scanning device and SD card music
             val audioPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -594,192 +607,266 @@ fun DesktopArea(
                                         }
                                     }
                                     2 -> {
-                                        // Ô 3: Trình phát nhạc kèm cover art, dừng, play, chuyển bài
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .padding(top = 2.dp),
-                                            verticalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            // Row: Cover art + Song details
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        // Ô 3: Trình phát nhạc
+                                        if (currentTrack == null) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .padding(vertical = 4.dp, horizontal = 4.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.SpaceBetween
                                             ) {
-                                                // Cover Art (từ thẻ nhớ/máy hoặc gradient)
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(42.dp)
-                                                        .clip(RoundedCornerShape(10.dp))
-                                                        .background(
-                                                            Brush.linearGradient(
-                                                                listOf(
-                                                                    Color(currentTrack.coverGradientStart),
-                                                                    Color(currentTrack.coverGradientEnd)
-                                                                )
-                                                            )
-                                                        )
-                                                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(10.dp)),
-                                                    contentAlignment = Alignment.Center
+                                                Column(
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                    modifier = Modifier.padding(top = 10.dp)
                                                 ) {
-                                                    if (currentTrack.albumArtUri != null) {
-                                                        Image(
-                                                            painter = rememberAsyncImagePainter(model = currentTrack.albumArtUri),
-                                                            contentDescription = null,
-                                                            contentScale = ContentScale.Crop,
-                                                            modifier = Modifier.fillMaxSize()
-                                                        )
-                                                    } else {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(46.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color(0xFFF43F5E).copy(alpha = 0.2f)),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
                                                         Icon(
                                                             imageVector = Icons.Default.MusicNote,
                                                             contentDescription = null,
-                                                            tint = Color.White,
-                                                            modifier = Modifier.size(20.dp)
+                                                            tint = Color(0xFFF43F5E),
+                                                            modifier = Modifier.size(24.dp)
+                                                        )
+                                                    }
+                                                    Spacer(modifier = Modifier.height(6.dp))
+                                                    Text(
+                                                        text = "Chưa có nhạc",
+                                                        color = Color.White,
+                                                        fontSize = 12.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                    Text(
+                                                        text = "Chạm quét để tìm nhạc thẻ nhớ / máy",
+                                                        color = Color.White.copy(alpha = 0.65f),
+                                                        fontSize = 8.sp,
+                                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                                    )
+                                                }
+
+                                                Surface(
+                                                    shape = RoundedCornerShape(10.dp),
+                                                    color = Color(0xFFE11D48).copy(alpha = 0.85f),
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clip(RoundedCornerShape(10.dp))
+                                                        .clickable {
+                                                            val hasPerm = ContextCompat.checkSelfPermission(context, audioPermission) == PackageManager.PERMISSION_GRANTED
+                                                            if (hasPerm) {
+                                                                viewModel.scanDeviceMusic(context)
+                                                            } else {
+                                                                audioPermissionLauncher.launch(audioPermission)
+                                                            }
+                                                        }
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.padding(vertical = 6.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.Center
+                                                    ) {
+                                                        Icon(Icons.Default.Refresh, contentDescription = "Quét lại", tint = Color.White, modifier = Modifier.size(13.dp))
+                                                        Spacer(modifier = Modifier.width(5.dp))
+                                                        Text(
+                                                            text = musicScanStatus ?: "Quét nhạc",
+                                                            color = Color.White,
+                                                            fontSize = 10.sp,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .padding(top = 2.dp),
+                                                verticalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                // Row: Cover art + Song details
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    // Cover Art (từ thẻ nhớ/máy hoặc gradient)
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(42.dp)
+                                                            .clip(RoundedCornerShape(10.dp))
+                                                            .background(
+                                                                Brush.linearGradient(
+                                                                    listOf(
+                                                                        Color(currentTrack.coverGradientStart),
+                                                                        Color(currentTrack.coverGradientEnd)
+                                                                    )
+                                                                )
+                                                            )
+                                                            .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(10.dp)),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        if (currentTrack.albumArtUri != null) {
+                                                            Image(
+                                                                painter = rememberAsyncImagePainter(model = currentTrack.albumArtUri),
+                                                                contentDescription = null,
+                                                                contentScale = ContentScale.Crop,
+                                                                modifier = Modifier.fillMaxSize()
+                                                            )
+                                                        } else {
+                                                            Icon(
+                                                                imageVector = Icons.Default.MusicNote,
+                                                                contentDescription = null,
+                                                                tint = Color.White,
+                                                                modifier = Modifier.size(20.dp)
+                                                            )
+                                                        }
+                                                    }
+
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Text(
+                                                            text = currentTrack.title,
+                                                            color = Color.White,
+                                                            fontSize = 11.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            maxLines = 1
+                                                        )
+                                                        Text(
+                                                            text = currentTrack.artist,
+                                                            color = Color.White.copy(alpha = 0.7f),
+                                                            fontSize = 8.5.sp,
+                                                            maxLines = 1
+                                                        )
+                                                        Text(
+                                                            text = if (isMusicPlaying) "● Đang phát" else "○ Tạm dừng",
+                                                            color = if (isMusicPlaying) Color(0xFF4ADE80) else Color.White.copy(alpha = 0.5f),
+                                                            fontSize = 7.5.sp
                                                         )
                                                     }
                                                 }
 
-                                                Column(modifier = Modifier.weight(1f)) {
-                                                    Text(
-                                                        text = currentTrack.title,
-                                                        color = Color.White,
-                                                        fontSize = 11.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        maxLines = 1
-                                                    )
-                                                    Text(
-                                                        text = currentTrack.artist,
-                                                        color = Color.White.copy(alpha = 0.7f),
-                                                        fontSize = 8.5.sp,
-                                                        maxLines = 1
-                                                    )
-                                                    Text(
-                                                        text = if (isMusicPlaying) "● Đang phát" else "○ Tạm dừng",
-                                                        color = if (isMusicPlaying) Color(0xFF4ADE80) else Color.White.copy(alpha = 0.5f),
-                                                        fontSize = 7.5.sp
+                                                // Progress bar
+                                                val playedMin = musicProgressSeconds / 60
+                                                val playedSec = musicProgressSeconds % 60
+                                                val progressPercent = (musicProgressSeconds.toFloat() / currentTrack.totalSeconds.toFloat()).coerceIn(0f, 1f)
+
+                                                Column(modifier = Modifier.fillMaxWidth()) {
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween
+                                                    ) {
+                                                        Text(
+                                                            text = String.format(Locale.US, "%02d:%02d", playedMin, playedSec),
+                                                            color = Color.White.copy(alpha = 0.7f),
+                                                            fontSize = 7.5.sp
+                                                        )
+                                                        Text(
+                                                            text = currentTrack.durationText,
+                                                            color = Color.White.copy(alpha = 0.7f),
+                                                            fontSize = 7.5.sp
+                                                        )
+                                                    }
+                                                    Spacer(modifier = Modifier.height(2.dp))
+                                                    LinearProgressIndicator(
+                                                        progress = { progressPercent },
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .height(3.dp)
+                                                            .clip(CircleShape),
+                                                        color = Color(0xFFF43F5E),
+                                                        trackColor = Color.White.copy(alpha = 0.15f)
                                                     )
                                                 }
-                                            }
 
-                                            // Progress bar
-                                            val playedMin = musicProgressSeconds / 60
-                                            val playedSec = musicProgressSeconds % 60
-                                            val progressPercent = (musicProgressSeconds.toFloat() / currentTrack.totalSeconds.toFloat()).coerceIn(0f, 1f)
-
-                                            Column(modifier = Modifier.fillMaxWidth()) {
+                                                // Playback buttons: Previous, Play/Pause, Next
                                                 Row(
                                                     modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceEvenly,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    // Prev
+                                                    IconButton(
+                                                        onClick = { viewModel.prevMusicTrack() },
+                                                        modifier = Modifier.size(28.dp)
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.SkipPrevious,
+                                                            contentDescription = "Bài trước",
+                                                            tint = Color.White.copy(alpha = 0.9f),
+                                                            modifier = Modifier.size(17.dp)
+                                                        )
+                                                    }
+
+                                                    // Play / Pause toggle
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(34.dp)
+                                                            .clip(CircleShape)
+                                                            .background(
+                                                                Brush.linearGradient(
+                                                                    listOf(Color(0xFFE11D48), Color(0xFFFB7185))
+                                                                )
+                                                            )
+                                                            .clickable { viewModel.toggleMusicPlayPause() },
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = if (isMusicPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                                            contentDescription = if (isMusicPlaying) "Dừng phát" else "Tiếp tục phát",
+                                                            tint = Color.White,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+
+                                                    // Next
+                                                    IconButton(
+                                                        onClick = { viewModel.nextMusicTrack() },
+                                                        modifier = Modifier.size(28.dp)
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.SkipNext,
+                                                            contentDescription = "Bài kế tiếp",
+                                                            tint = Color.White.copy(alpha = 0.9f),
+                                                            modifier = Modifier.size(17.dp)
+                                                        )
+                                                    }
+                                                }
+
+                                                // Nút quét nhạc trên máy & thẻ nhớ
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clip(RoundedCornerShape(6.dp))
+                                                        .background(Color.White.copy(alpha = 0.08f))
+                                                        .clickable {
+                                                            val hasPerm = ContextCompat.checkSelfPermission(context, audioPermission) == PackageManager.PERMISSION_GRANTED
+                                                            if (hasPerm) {
+                                                                viewModel.scanDeviceMusic(context)
+                                                            } else {
+                                                                audioPermissionLauncher.launch(audioPermission)
+                                                            }
+                                                        }
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
                                                     horizontalArrangement = Arrangement.SpaceBetween
                                                 ) {
                                                     Text(
-                                                        text = String.format(Locale.US, "%02d:%02d", playedMin, playedSec),
-                                                        color = Color.White.copy(alpha = 0.7f),
-                                                        fontSize = 7.5.sp
+                                                        text = musicScanStatus ?: "Quét nhạc trên máy & thẻ nhớ",
+                                                        color = Color(0xFF38BDF8),
+                                                        fontSize = 7.5.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        maxLines = 1
                                                     )
-                                                    Text(
-                                                        text = currentTrack.durationText,
-                                                        color = Color.White.copy(alpha = 0.7f),
-                                                        fontSize = 7.5.sp
-                                                    )
-                                                }
-                                                Spacer(modifier = Modifier.height(2.dp))
-                                                LinearProgressIndicator(
-                                                    progress = { progressPercent },
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .height(3.dp)
-                                                        .clip(CircleShape),
-                                                    color = Color(0xFFF43F5E),
-                                                    trackColor = Color.White.copy(alpha = 0.15f)
-                                                )
-                                            }
-
-                                            // Playback buttons: Previous, Play/Pause, Next
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                // Prev
-                                                IconButton(
-                                                    onClick = { viewModel.prevMusicTrack() },
-                                                    modifier = Modifier.size(28.dp)
-                                                ) {
                                                     Icon(
-                                                        imageVector = Icons.Default.SkipPrevious,
-                                                        contentDescription = "Bài trước",
-                                                        tint = Color.White.copy(alpha = 0.9f),
-                                                        modifier = Modifier.size(17.dp)
+                                                        imageVector = Icons.Default.Refresh,
+                                                        contentDescription = "Quét lại",
+                                                        tint = Color(0xFF38BDF8),
+                                                        modifier = Modifier.size(9.dp)
                                                     )
                                                 }
-
-                                                // Play / Pause toggle
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(34.dp)
-                                                        .clip(CircleShape)
-                                                        .background(
-                                                            Brush.linearGradient(
-                                                                listOf(Color(0xFFE11D48), Color(0xFFFB7185))
-                                                            )
-                                                        )
-                                                        .clickable { viewModel.toggleMusicPlayPause() },
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Icon(
-                                                        imageVector = if (isMusicPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                                        contentDescription = if (isMusicPlaying) "Dừng phát" else "Tiếp tục phát",
-                                                        tint = Color.White,
-                                                        modifier = Modifier.size(18.dp)
-                                                    )
-                                                }
-
-                                                // Next
-                                                IconButton(
-                                                    onClick = { viewModel.nextMusicTrack() },
-                                                    modifier = Modifier.size(28.dp)
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.SkipNext,
-                                                        contentDescription = "Bài kế tiếp",
-                                                        tint = Color.White.copy(alpha = 0.9f),
-                                                        modifier = Modifier.size(17.dp)
-                                                    )
-                                                }
-                                            }
-
-                                            // Nút quét nhạc trên máy & thẻ nhớ
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .clip(RoundedCornerShape(6.dp))
-                                                    .background(Color.White.copy(alpha = 0.08f))
-                                                    .clickable {
-                                                        val hasPerm = ContextCompat.checkSelfPermission(context, audioPermission) == PackageManager.PERMISSION_GRANTED
-                                                        if (hasPerm) {
-                                                            viewModel.scanDeviceMusic(context)
-                                                        } else {
-                                                            audioPermissionLauncher.launch(audioPermission)
-                                                        }
-                                                    }
-                                                    .padding(horizontal = 6.dp, vertical = 2.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.SpaceBetween
-                                            ) {
-                                                Text(
-                                                    text = musicScanStatus ?: "Quét nhạc trên máy & thẻ nhớ",
-                                                    color = Color(0xFF38BDF8),
-                                                    fontSize = 7.5.sp,
-                                                    fontWeight = FontWeight.Medium,
-                                                    maxLines = 1
-                                                )
-                                                Icon(
-                                                    imageVector = Icons.Default.Refresh,
-                                                    contentDescription = "Quét lại",
-                                                    tint = Color(0xFF38BDF8),
-                                                    modifier = Modifier.size(9.dp)
-                                                )
                                             }
                                         }
                                     }
@@ -787,7 +874,6 @@ fun DesktopArea(
                             }
                         }
                     }
-                }
 
                 // Widget 2: Giá Thị Trường (3 trang: 0 = Cà Phê & Vàng, 1 = Giá Xăng, 2 = Giá Dầu)
                 if (showMarketPrices) {
@@ -842,7 +928,7 @@ fun DesktopArea(
                                     }
                                     val headerTitle = when (marketPagerState.currentPage) {
                                         0 -> "GIÁ CÀ PHÊ & VÀNG"
-                                        1 -> "GIÁ XĂNG DẦU"
+                                        1 -> "GIÁ XĂNG"
                                         else -> "GIÁ DẦU"
                                     }
 
@@ -943,44 +1029,87 @@ fun DesktopArea(
                                                 .padding(top = 4.dp),
                                             verticalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            // Coffee section - Ô giá thị trường bỏ chữ "giá tại :"
+                                            // Coffee & Pepper section
                                             Column(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     .clip(RoundedCornerShape(8.dp))
                                                     .clickable { viewModel.openCoffeeOnlineDialog() }
-                                                    .padding(vertical = 2.dp)
+                                                    .padding(vertical = 1.dp)
                                             ) {
                                                 Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
                                                 ) {
+                                                    // Cà phê
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Row(
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                                        ) {
+                                                            Text(
+                                                                text = "☕ Cà phê",
+                                                                color = Color(0xFFFED7AA),
+                                                                fontSize = 9.5.sp,
+                                                                fontWeight = FontWeight.Bold
+                                                            )
+                                                            Text(
+                                                                text = "Lâm Đồng",
+                                                                color = Color(0xFF60A5FA),
+                                                                fontSize = 8.sp,
+                                                                fontWeight = FontWeight.Bold
+                                                            )
+                                                        }
+                                                        val liveLamDongPrice = marketPrices?.lamDongCoffeePrice ?: "88.500 đ/kg"
+                                                        Text(
+                                                            text = liveLamDongPrice,
+                                                            color = Color(0xFFFBBF24),
+                                                            fontSize = 12.5.sp,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                    }
+
+                                                    // Giá tiêu
+                                                    Column(
+                                                        horizontalAlignment = Alignment.End,
+                                                        modifier = Modifier.weight(1f)
+                                                    ) {
+                                                        Text(
+                                                            text = "🌱 Giá tiêu",
+                                                            color = Color(0xFFA7F3D0),
+                                                            fontSize = 9.5.sp,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                        val pepperPrice = marketPrices?.pepperPrice ?: "140.000 đ/kg"
+                                                        Text(
+                                                            text = pepperPrice,
+                                                            color = Color(0xFF34D399),
+                                                            fontSize = 12.5.sp,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                    }
+                                                }
+
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    modifier = Modifier.fillMaxWidth().padding(top = 1.dp)
+                                                ) {
+                                                    val cleanNum = (marketPrices?.lamDongCoffeePrice ?: "88.500").replace(" đ/kg", "").trim()
                                                     Text(
-                                                        text = "☕ Cà phê",
-                                                        color = Color(0xFFFED7AA),
-                                                        fontSize = 10.5.sp,
-                                                        fontWeight = FontWeight.Bold
+                                                        text = "Di Linh/Bảo Lộc: $cleanNum đ",
+                                                        color = Color.White.copy(alpha = 0.65f),
+                                                        fontSize = 7.5.sp
                                                     )
                                                     Text(
-                                                        text = "Lâm Đồng",
-                                                        color = Color(0xFF60A5FA),
-                                                        fontSize = 9.sp,
-                                                        fontWeight = FontWeight.Bold
+                                                        text = "Tiêu: ${marketPrices?.pepperChange ?: "0 đ"}",
+                                                        color = if ((marketPrices?.pepperChange ?: "").contains("-")) Color(0xFFF87171) else Color(0xFF34D399),
+                                                        fontSize = 7.5.sp,
+                                                        fontWeight = FontWeight.SemiBold
                                                     )
                                                 }
-                                                val liveLamDongPrice = marketPrices?.lamDongCoffeePrice ?: "88.500 đ/kg"
-                                                val cleanNum = liveLamDongPrice.replace(" đ/kg", "").trim()
-                                                Text(
-                                                    text = liveLamDongPrice,
-                                                    color = Color(0xFFFBBF24),
-                                                    fontSize = 14.sp,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                                Text(
-                                                    text = "Di Linh: $cleanNum đ | Bảo Lộc: $cleanNum đ",
-                                                    color = Color.White.copy(alpha = 0.7f),
-                                                    fontSize = 8.sp
-                                                )
+
                                                 Row(
                                                     verticalAlignment = Alignment.CenterVertically,
                                                     horizontalArrangement = Arrangement.spacedBy(3.dp),
@@ -995,7 +1124,7 @@ fun DesktopArea(
                                                     Text(
                                                         text = "Cập nhật: ${marketPrices?.lastUpdated ?: "Thời gian thực"}",
                                                         color = Color(0xFF34D399),
-                                                        fontSize = 7.5.sp,
+                                                        fontSize = 7.sp,
                                                         maxLines = 1
                                                     )
                                                 }
@@ -1247,9 +1376,41 @@ fun DesktopArea(
                 }
             }
 
+            // Desktop Pinned Apps Grid (Apps pinned to home screen from Launchpad)
+            val desktopPinnedApps by viewModel.desktopPinnedApps.collectAsState()
+
+            if (desktopPinnedApps.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(14.dp))
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .testTag("desktop_pinned_apps_grid")
+                ) {
+                    items(
+                        items = desktopPinnedApps,
+                        key = { it.packageName }
+                    ) { app ->
+                        DesktopAppItem(
+                            app = app,
+                            badgeCount = viewModel.getBadgeCount(app.packageName),
+                            onLaunch = { viewModel.launchApp(context, app) },
+                            onUnpin = { viewModel.unpinAppFromDesktop(app.packageName) }
+                        )
+                    }
+                }
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+
             // Swipe right guide banner to Launchpad (optional for clean desktop)
             if (showLaunchpadGuide) {
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 Surface(
                     shape = RoundedCornerShape(18.dp),
@@ -1318,6 +1479,215 @@ fun DesktopArea(
                     }
                 }
             }
+        }
+    }
+}
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun DesktopAppItem(
+    app: AppInfo,
+    badgeCount: Int,
+    onLaunch: () -> Unit,
+    onUnpin: () -> Unit
+) {
+    val context = LocalContext.current
+    var isMenuOpen by remember { mutableStateOf(false) }
+
+    val shortcuts: List<com.example.util.AppShortcutItem> = remember(app.packageName, isMenuOpen) {
+        if (isMenuOpen) {
+            com.example.util.AppShortcutHelper.getAppShortcuts(context, app.packageName)
+        } else {
+            emptyList()
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onLaunch,
+                onLongClick = { isMenuOpen = true }
+            )
+            .padding(4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Box(contentAlignment = Alignment.TopEnd) {
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = Color.White.copy(alpha = 0.22f),
+                    shadowElevation = 8.dp,
+                    modifier = Modifier
+                        .size(60.dp)
+                        .border(
+                            width = 1.dp,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.65f),
+                                    Color.White.copy(alpha = 0.18f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(18.dp)
+                        )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(5.dp)
+                            .clip(RoundedCornerShape(14.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (app.iconBitmap != null) {
+                            Image(
+                                bitmap = app.iconBitmap,
+                                contentDescription = app.label,
+                                modifier = Modifier.size(48.dp)
+                            )
+                        } else if (app.systemIconFallback != null) {
+                            Icon(
+                                imageVector = app.systemIconFallback,
+                                contentDescription = app.label,
+                                tint = Color.White,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Notification Badge kèm số khi có thông báo
+                if (badgeCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .offset(x = 6.dp, y = (-4).dp)
+                            .background(Color(0xFFFF3B30), CircleShape)
+                            .border(1.5.dp, Color.White, CircleShape)
+                            .padding(horizontal = if (badgeCount > 9) 4.5.dp else 2.5.dp, vertical = 0.5.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (badgeCount > 99) "99+" else badgeCount.toString(),
+                            color = Color.White,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            // App Label with subtle text
+            Text(
+                text = app.label,
+                color = Color.White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
+
+        // Long press context menu for pinned app
+        DropdownMenu(
+            expanded = isMenuOpen,
+            onDismissRequest = { isMenuOpen = false },
+            modifier = Modifier
+                .background(Color(0xFF262626))
+                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+        ) {
+            // App name header
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        app.label,
+                        color = Color.White,
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                onClick = {
+                    isMenuOpen = false
+                    onLaunch()
+                }
+            )
+
+            HorizontalDivider(color = Color.DarkGray)
+
+            // App Shortcuts if available
+            if (shortcuts.isNotEmpty()) {
+                for (shortcut in shortcuts) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(shortcut.shortLabel, color = Color(0xFFF3F4F6), fontSize = 12.5.sp)
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.OpenInNew,
+                                contentDescription = null,
+                                tint = Color(0xFF60A5FA),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        },
+                        onClick = {
+                            isMenuOpen = false
+                            com.example.util.AppShortcutHelper.launchShortcut(context, shortcut)
+                        }
+                    )
+                }
+                HorizontalDivider(color = Color.DarkGray, modifier = Modifier.padding(vertical = 4.dp))
+            }
+
+            // Xóa khỏi màn hình chính (Unpin)
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        "Xóa khỏi màn hình chính",
+                        color = Color(0xFFF87171),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.BookmarkRemove,
+                        contentDescription = null,
+                        tint = Color(0xFFF87171),
+                        modifier = Modifier.size(17.dp)
+                    )
+                },
+                onClick = {
+                    isMenuOpen = false
+                    onUnpin()
+                }
+            )
+
+            // Thông tin ứng dụng (App Info)
+            DropdownMenuItem(
+                text = { Text("Thông tin ứng dụng", color = Color.White, fontSize = 13.sp) },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Info,
+                        contentDescription = null,
+                        tint = Color(0xFF60A5FA),
+                        modifier = Modifier.size(17.dp)
+                    )
+                },
+                onClick = {
+                    isMenuOpen = false
+                    try {
+                        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = android.net.Uri.parse("package:" + app.packageName)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        // ignore
+                    }
+                }
+            )
         }
     }
 }
