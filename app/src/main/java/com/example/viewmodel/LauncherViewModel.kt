@@ -153,20 +153,20 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val currentLunarDate: StateFlow<LunarDate> = _currentLunarDate.asStateFlow()
 
     // Market Prices (Giá Cà phê & Vàng nhẫn)
-    private val _marketPrices = MutableStateFlow<MarketPriceReport?>(null)
+    private val _marketPrices = MutableStateFlow<MarketPriceReport?>(MarketPriceReport())
     val marketPrices: StateFlow<MarketPriceReport?> = _marketPrices.asStateFlow()
 
     private val _isMarketPricesRefreshing = MutableStateFlow(false)
     val isMarketPricesRefreshing: StateFlow<Boolean> = _isMarketPricesRefreshing.asStateFlow()
 
     // Preferences states
-    private val _showClock = MutableStateFlow(prefs.showClock)
+    private val _showClock = MutableStateFlow(true)
     val showClock: StateFlow<Boolean> = _showClock.asStateFlow()
 
-    private val _showLunar = MutableStateFlow(prefs.showLunar)
+    private val _showLunar = MutableStateFlow(true)
     val showLunar: StateFlow<Boolean> = _showLunar.asStateFlow()
 
-    private val _showMarketPrices = MutableStateFlow(prefs.showMarketPrices)
+    private val _showMarketPrices = MutableStateFlow(true)
     val showMarketPrices: StateFlow<Boolean> = _showMarketPrices.asStateFlow()
 
     private val _is24Hour = MutableStateFlow(prefs.is24HourFormat)
@@ -333,6 +333,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     init {
+        prefs.showClock = true
+        prefs.showLunar = true
+        prefs.showMarketPrices = true
         loadInstalledApps()
         startClockTicker()
         fetchMarketPrices()

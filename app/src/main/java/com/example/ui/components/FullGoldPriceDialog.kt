@@ -89,18 +89,18 @@ fun FullGoldPriceDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
-            shape = RoundedCornerShape(22.dp),
+            shape = RoundedCornerShape(26.dp),
             color = Color(0xFF1E1E1E),
             modifier = Modifier
                 .fillMaxWidth(0.96f)
                 .fillMaxHeight(0.90f)
-                .shadow(28.dp, RoundedCornerShape(22.dp))
+                .shadow(28.dp, RoundedCornerShape(26.dp))
                 .border(
-                    width = 1.dp,
+                    width = 1.2.dp,
                     brush = Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.1f))
+                        listOf(Color.White.copy(alpha = 0.85f), Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.60f))
                     ),
-                    shape = RoundedCornerShape(22.dp)
+                    shape = RoundedCornerShape(26.dp)
                 )
                 .testTag("full_gold_price_dialog")
         ) {

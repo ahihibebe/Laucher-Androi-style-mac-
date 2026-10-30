@@ -24,14 +24,14 @@ data class PetrolPrice(
 )
 
 data class MarketPriceReport(
-    val coffeePrices: List<CoffeePrice>,
-    val averageCoffeePrice: String,
-    val lamDongCoffeePrice: String,
-    val lamDongDistricts: List<CoffeePrice>,
-    val pepperPrice: String = "140.000 đ/kg",
-    val pepperChange: String = "0 đ/kg",
-    val goldPrices: List<GoldPrice>,
-    val petrolPrices: List<PetrolPrice>,
+    val coffeePrices: List<CoffeePrice> = emptyList(),
+    val averageCoffeePrice: String = "89.000 đ/kg",
+    val lamDongCoffeePrice: String = "88.500 đ/kg",
+    val lamDongDistricts: List<CoffeePrice> = emptyList(),
+    val pepperPrice: String = "137.500 đ/kg",
+    val pepperChange: String = "-1.000 đ/kg",
+    val goldPrices: List<GoldPrice> = emptyList(),
+    val petrolPrices: List<PetrolPrice> = emptyList(),
     val oilPrices: List<PetrolPrice> = emptyList(),
-    val lastUpdated: String
+    val lastUpdated: String = "Thời gian thực"
 )

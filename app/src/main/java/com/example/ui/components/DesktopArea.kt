@@ -47,7 +47,9 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -203,8 +205,9 @@ fun DesktopArea(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             val pagerScope = rememberCoroutineScope()
-            val leftPagerState = rememberPagerState(initialPage = 1, pageCount = { 3 })
+            val leftPagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
             val marketPagerState = rememberPagerState(pageCount = { 3 })
+            val currentPrices = marketPrices ?: remember { com.example.model.MarketPriceReport() }
 
             val bankQrUri by viewModel.bankQrUri.collectAsState()
             val bankQrScale by viewModel.bankQrScale.collectAsState()
@@ -230,382 +233,410 @@ fun DesktopArea(
                 }
             }
 
-            // Symmetrical Cards: Left = QR / Lịch Vạn Niên / Trình Phát Nhạc; Right = Cà phê & Vàng / Giá Xăng / Giá Dầu
+            // Symmetrical Cards: Left = Lịch Vạn Niên & QR & Nhạc; Right = Cà phê & Vàng / Giá Xăng / Giá Dầu
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Widget 1: Left Card (3 pages: 0 = QR Ngân Hàng, 1 = Lịch Vạn Niên, 2 = Trình Phát Nhạc)
-                if (showClock || showLunar) {
-                    Card(
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color.Black.copy(alpha = 0.38f)
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(196.dp)
-                            .border(
-                                1.dp,
-                                Brush.verticalGradient(
-                                    listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.08f))
-                                ),
-                                RoundedCornerShape(20.dp)
+                // Widget 1: Left Card (3 pages: 0 = Lịch Vạn Niên & Đồng Hồ, 1 = QR Ngân Hàng, 2 = Trình Phát Nhạc)
+                Card(
+                    shape = RoundedCornerShape(26.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.Transparent
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(200.dp)
+                        .shadow(16.dp, RoundedCornerShape(26.dp))
+                        .clip(RoundedCornerShape(26.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.28f),
+                                    Color.White.copy(alpha = 0.12f),
+                                    Color.Black.copy(alpha = 0.35f)
+                                )
                             )
-                            .testTag("clock_lunar_desktop_widget")
-                    ) {
+                        )
+                        .border(
+                            1.2.dp,
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.90f),
+                                    Color.White.copy(alpha = 0.20f),
+                                    Color.White.copy(alpha = 0.65f)
+                                )
+                            ),
+                            RoundedCornerShape(26.dp)
+                        )
+                        .testTag("clock_lunar_desktop_widget")
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // Top Specular Gloss Highlight (Liquid Glass Dome Shine)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                                .align(Alignment.TopCenter)
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color.White.copy(alpha = 0.35f),
+                                            Color.White.copy(alpha = 0.05f),
+                                            Color.Transparent
+                                        )
+                                    )
+                                )
+                        )
+
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(10.dp),
+                                .padding(11.dp),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            // Top Bar inside Left Card: Title + Page Indicator (3 dots)
+                        // Top Bar inside Left Card: Title + Page Indicator (3 dots)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    modifier = Modifier.clickable {
-                                        pagerScope.launch {
-                                            val next = (leftPagerState.currentPage + 1) % 3
-                                            leftPagerState.animateScrollToPage(next)
-                                        }
-                                    }
-                                ) {
-                                    val headerIcon = when (leftPagerState.currentPage) {
-                                        0 -> Icons.Default.QrCode2
-                                        2 -> Icons.Default.MusicNote
-                                        else -> Icons.Default.CalendarMonth
-                                    }
-                                    val headerTint = when (leftPagerState.currentPage) {
-                                        0 -> Color(0xFF38BDF8)
-                                        2 -> Color(0xFFF43F5E)
-                                        else -> Color(0xFFFFB74D)
-                                    }
-                                    val headerTitle = when (leftPagerState.currentPage) {
-                                        0 -> "QR NGÂN HÀNG"
-                                        2 -> "TRÌNH PHÁT NHẠC"
-                                        else -> "LỊCH VẠN NIÊN"
-                                    }
-
-                                    Box(
-                                        modifier = Modifier
-                                            .size(18.dp)
-                                            .clip(CircleShape)
-                                            .background(headerTint.copy(alpha = 0.25f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = headerIcon,
-                                            contentDescription = null,
-                                            tint = headerTint,
-                                            modifier = Modifier.size(12.dp)
-                                        )
-                                    }
-
-                                    Column {
-                                        Text(
-                                            text = headerTitle,
-                                            color = Color.White.copy(alpha = 0.9f),
-                                            fontSize = 9.5.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-
-                                        // Chữ xem đầy đủ di chuyển dưới chữ lịch vạn niên
-                                        if (leftPagerState.currentPage == 1) {
-                                            Row(
-                                                modifier = Modifier
-                                                    .clip(RoundedCornerShape(4.dp))
-                                                    .clickable { viewModel.openFullCalendarDialog() },
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                            ) {
-                                                Text("Xem đầy đủ", color = Color(0xFFFBBF24), fontSize = 8.sp, fontWeight = FontWeight.SemiBold)
-                                                Icon(Icons.Default.OpenInNew, contentDescription = null, tint = Color(0xFFFBBF24), modifier = Modifier.size(8.5.dp))
-                                            }
-                                        }
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.clickable {
+                                    pagerScope.launch {
+                                        val next = (leftPagerState.currentPage + 1) % 3
+                                        leftPagerState.animateScrollToPage(next)
                                     }
                                 }
+                            ) {
+                                val headerIcon = when (leftPagerState.currentPage) {
+                                    0 -> Icons.Default.CalendarMonth
+                                    1 -> Icons.Default.QrCode2
+                                    else -> Icons.Default.MusicNote
+                                }
+                                val headerTint = when (leftPagerState.currentPage) {
+                                    0 -> Color(0xFFFFB74D)
+                                    1 -> Color(0xFF38BDF8)
+                                    else -> Color(0xFFF43F5E)
+                                }
+                                val headerTitle = when (leftPagerState.currentPage) {
+                                    0 -> "LỊCH VẠN NIÊN"
+                                    1 -> "QR NGÂN HÀNG"
+                                    else -> "TRÌNH PHÁT NHẠC"
+                                }
 
-                                // 3 dots for Left Card
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                Box(
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .clip(CircleShape)
+                                        .background(headerTint.copy(alpha = 0.25f)),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    repeat(3) { idx ->
-                                        Box(
+                                    Icon(
+                                        imageVector = headerIcon,
+                                        contentDescription = null,
+                                        tint = headerTint,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+
+                                Column {
+                                    Text(
+                                        text = headerTitle,
+                                        color = Color.White.copy(alpha = 0.9f),
+                                        fontSize = 9.5.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    // Chữ xem đầy đủ khi ở trang Lịch Vạn Niên
+                                    if (leftPagerState.currentPage == 0) {
+                                        Row(
                                             modifier = Modifier
-                                                .size(if (leftPagerState.currentPage == idx) 6.dp else 4.dp)
-                                                .clip(CircleShape)
-                                                .background(
-                                                    if (leftPagerState.currentPage == idx) {
-                                                        when (idx) {
-                                                            0 -> Color(0xFF38BDF8)
-                                                            1 -> Color(0xFFFFB74D)
-                                                            else -> Color(0xFFF43F5E)
-                                                        }
-                                                    } else Color.White.copy(alpha = 0.35f)
-                                                )
-                                                .clickable {
-                                                    pagerScope.launch { leftPagerState.animateScrollToPage(idx) }
-                                                }
-                                        )
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .clickable { viewModel.openFullCalendarDialog() },
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                        ) {
+                                            Text("Xem đầy đủ", color = Color(0xFFFBBF24), fontSize = 8.sp, fontWeight = FontWeight.SemiBold)
+                                            Icon(Icons.Default.OpenInNew, contentDescription = null, tint = Color(0xFFFBBF24), modifier = Modifier.size(8.5.dp))
+                                        }
                                     }
                                 }
                             }
 
-                            // 3-page HorizontalPager for Left Card
-                            HorizontalPager(
-                                state = leftPagerState,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                            ) { page ->
-                                when (page) {
-                                    0 -> {
-                                        // Ô 1: Chọn ảnh QR ngân hàng từ bộ nhớ máy & hiển thị
+                            // 3 dots for Left Card
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                repeat(3) { idx ->
+                                    Box(
+                                        modifier = Modifier
+                                            .size(if (leftPagerState.currentPage == idx) 6.dp else 4.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (leftPagerState.currentPage == idx) {
+                                                    when (idx) {
+                                                        0 -> Color(0xFFFFB74D)
+                                                        1 -> Color(0xFF38BDF8)
+                                                        else -> Color(0xFFF43F5E)
+                                                    }
+                                                } else Color.White.copy(alpha = 0.35f)
+                                            )
+                                            .clickable {
+                                                pagerScope.launch { leftPagerState.animateScrollToPage(idx) }
+                                            }
+                                    )
+                                }
+                            }
+                        }
+
+                        // 3-page HorizontalPager for Left Card
+                        HorizontalPager(
+                            state = leftPagerState,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                        ) { page ->
+                            when (page) {
+                                0 -> {
+                                    // Trang 0: Đồng Hồ & Lịch Vạn Niên (Mặc định trang đầu luôn hiển thị trực tiếp)
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clickable { viewModel.openFullCalendarDialog() },
+                                        verticalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        // Center: Đồng hồ giờ & ngày dương
+                                        Column(modifier = Modifier.padding(top = 2.dp)) {
+                                            Text(
+                                                text = formattedTime,
+                                                color = Color.White,
+                                                fontSize = 25.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = formattedDate,
+                                                color = Color.White.copy(alpha = 0.85f),
+                                                fontSize = 10.5.sp
+                                            )
+                                        }
+
+                                        // Thêm âm lịch vào dưới cùng
                                         Column(
                                             modifier = Modifier
-                                                .fillMaxSize()
-                                                .padding(top = 2.dp),
-                                            verticalArrangement = Arrangement.SpaceBetween,
-                                            horizontalAlignment = Alignment.CenterHorizontally
+                                                .fillMaxWidth()
+                                                .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
+                                                .padding(horizontal = 6.dp, vertical = 4.dp)
                                         ) {
-                                            if (bankQrUri != null) {
-                                                // Container QR với khả năng zoom/resize và chuyển chế độ vừa khung
-                                                Surface(
-                                                    shape = RoundedCornerShape(10.dp),
-                                                    color = Color.White,
-                                                    shadowElevation = 4.dp,
-                                                    modifier = Modifier
-                                                        .size(86.dp)
-                                                        .clip(RoundedCornerShape(10.dp))
-                                                        .clickable { viewModel.openBankQrZoom() }
-                                                ) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxSize()
-                                                            .clip(RoundedCornerShape(10.dp))
-                                                            .padding(2.dp),
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Image(
-                                                            painter = rememberAsyncImagePainter(model = bankQrUri),
-                                                            contentDescription = "Mã QR ngân hàng",
-                                                            contentScale = if (bankQrFitMode == "fit") ContentScale.Fit else ContentScale.Crop,
-                                                            modifier = Modifier
-                                                                .fillMaxSize()
-                                                                .graphicsLayer {
-                                                                    scaleX = bankQrScale
-                                                                    scaleY = bankQrScale
-                                                                }
-                                                        )
-                                                    }
-                                                }
-
-                                                // Thanh công cụ Resize & Căn chỉnh ảnh QR vừa khung
-                                                Row(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(horizontal = 2.dp),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Row(
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                                    ) {
-                                                        Text(
-                                                            text = "−",
-                                                            color = Color.White,
-                                                            fontSize = 11.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            modifier = Modifier
-                                                                .clip(CircleShape)
-                                                                .background(Color.White.copy(alpha = 0.15f))
-                                                                .clickable { viewModel.setBankQrScale(bankQrScale - 0.1f) }
-                                                                .padding(horizontal = 5.dp, vertical = 1.dp)
-                                                        )
-                                                        Text(
-                                                            text = "${(bankQrScale * 100).toInt()}%",
-                                                            color = Color(0xFF67E8F9),
-                                                            fontSize = 8.sp,
-                                                            fontWeight = FontWeight.Medium,
-                                                            modifier = Modifier
-                                                                .clickable { viewModel.setBankQrScale(1.0f) }
-                                                                .padding(horizontal = 2.dp)
-                                                        )
-                                                        Text(
-                                                            text = "+",
-                                                            color = Color.White,
-                                                            fontSize = 11.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            modifier = Modifier
-                                                                .clip(CircleShape)
-                                                                .background(Color.White.copy(alpha = 0.15f))
-                                                                .clickable { viewModel.setBankQrScale(bankQrScale + 0.1f) }
-                                                                .padding(horizontal = 5.dp, vertical = 1.dp)
-                                                        )
-                                                    }
-
-                                                    Text(
-                                                        text = if (bankQrFitMode == "fit") "Vừa khung" else "Lấp đầy",
-                                                        color = Color(0xFFFBBF24),
-                                                        fontSize = 7.5.sp,
-                                                        fontWeight = FontWeight.Medium,
-                                                        modifier = Modifier
-                                                            .clip(RoundedCornerShape(4.dp))
-                                                            .background(Color.White.copy(alpha = 0.12f))
-                                                            .clickable { viewModel.toggleBankQrFitMode() }
-                                                            .padding(horizontal = 4.dp, vertical = 2.dp)
-                                                    )
-                                                }
-
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceEvenly,
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Text(
-                                                        text = "🔍 Phóng to",
-                                                        color = Color(0xFF60A5FA),
-                                                        fontSize = 8.sp,
-                                                        fontWeight = FontWeight.Medium,
-                                                        modifier = Modifier
-                                                            .clip(RoundedCornerShape(4.dp))
-                                                            .clickable { viewModel.openBankQrZoom() }
-                                                            .padding(horizontal = 4.dp, vertical = 1.5.dp)
-                                                    )
-                                                    Text(
-                                                        text = "🔄 Đổi ảnh",
-                                                        color = Color(0xFFFDE047),
-                                                        fontSize = 8.sp,
-                                                        fontWeight = FontWeight.Medium,
-                                                        modifier = Modifier
-                                                            .clip(RoundedCornerShape(4.dp))
-                                                            .clickable { onPickBankQr() }
-                                                            .padding(horizontal = 4.dp, vertical = 1.5.dp)
-                                                    )
-                                                }
-                                            } else {
-                                                Column(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .weight(1f)
-                                                        .clip(RoundedCornerShape(12.dp))
-                                                        .background(Color.White.copy(alpha = 0.06f))
-                                                        .clickable { onPickBankQr() }
-                                                        .padding(6.dp),
-                                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                                    verticalArrangement = Arrangement.Center
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.AddPhotoAlternate,
-                                                        contentDescription = null,
-                                                        tint = Color(0xFF38BDF8),
-                                                        modifier = Modifier.size(24.dp)
-                                                    )
-                                                    Spacer(modifier = Modifier.height(3.dp))
-                                                    Text(
-                                                        text = "Chọn ảnh QR ngân hàng",
-                                                        color = Color.White,
-                                                        fontSize = 9.sp,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                    Text(
-                                                        text = "Chạm để tải từ bộ nhớ máy",
-                                                        color = Color.White.copy(alpha = 0.6f),
-                                                        fontSize = 7.5.sp
-                                                    )
-                                                }
-
-                                                Surface(
-                                                    shape = RoundedCornerShape(8.dp),
-                                                    color = Color(0xFF0284C7).copy(alpha = 0.4f),
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .clickable { onPickBankQr() }
-                                                ) {
-                                                    Text(
-                                                        text = "Tải ảnh mã QR",
-                                                        color = Color(0xFF7DD3FC),
-                                                        fontSize = 8.5.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        modifier = Modifier.padding(vertical = 3.dp),
-                                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                                    )
-                                                }
-                                            }
-
                                             Text(
-                                                text = "👉 Cuộn sang xem Lịch Vạn Niên",
+                                                text = "Âm lịch: Ngày ${lunarDate.day}/${lunarDate.month}${if (lunarDate.isLeap) " (Nhuận)" else ""}",
+                                                color = Color(0xFFFDE047),
+                                                fontSize = 11.5.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            if (showCanChi) {
+                                                Text(
+                                                    text = "Năm ${lunarDate.canChiYear} • Giờ ${lunarDate.canChiDay}",
+                                                    color = Color.White.copy(alpha = 0.75f),
+                                                    fontSize = 8.5.sp
+                                                )
+                                            }
+                                            Text(
+                                                text = "Chạm xem lịch đầy đủ • Vuốt sang QR 👉",
                                                 color = Color.White.copy(alpha = 0.45f),
-                                                fontSize = 7.5.sp,
-                                                modifier = Modifier.clickable {
-                                                    pagerScope.launch { leftPagerState.animateScrollToPage(1) }
-                                                }
+                                                fontSize = 7.5.sp
                                             )
                                         }
                                     }
-                                    1 -> {
-                                        // Ô 2: Lịch Vạn Niên (Xem đầy đủ ở dưới tiêu đề, âm lịch dưới cùng)
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .clickable { viewModel.openFullCalendarDialog() },
-                                            verticalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            // Center: Đồng hồ giờ & ngày dương
-                                            if (showClock) {
-                                                Column(modifier = Modifier.padding(top = 2.dp)) {
-                                                    Text(
-                                                        text = formattedTime,
-                                                        color = Color.White,
-                                                        fontSize = 25.sp,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                    Text(
-                                                        text = formattedDate,
-                                                        color = Color.White.copy(alpha = 0.85f),
-                                                        fontSize = 10.5.sp
+                                }
+                                1 -> {
+                                    // Trang 1: Chọn ảnh QR ngân hàng từ bộ nhớ máy & hiển thị
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(top = 2.dp),
+                                        verticalArrangement = Arrangement.SpaceBetween,
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        if (bankQrUri != null) {
+                                            // Container QR với khả năng zoom/resize và chuyển chế độ vừa khung
+                                            Surface(
+                                                shape = RoundedCornerShape(10.dp),
+                                                color = Color.White,
+                                                shadowElevation = 4.dp,
+                                                modifier = Modifier
+                                                    .size(86.dp)
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .clickable { viewModel.openBankQrZoom() }
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .clip(RoundedCornerShape(10.dp))
+                                                        .padding(2.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Image(
+                                                        painter = rememberAsyncImagePainter(model = bankQrUri),
+                                                        contentDescription = "Mã QR ngân hàng",
+                                                        contentScale = if (bankQrFitMode == "fit") ContentScale.Fit else ContentScale.Crop,
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .graphicsLayer {
+                                                                scaleX = bankQrScale
+                                                                scaleY = bankQrScale
+                                                            }
                                                     )
                                                 }
                                             }
 
-                                            // Thêm âm lịch vào dưới cùng
-                                            if (showLunar) {
-                                                Column(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
-                                                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                                            // Thanh công cụ Resize & Căn chỉnh ảnh QR vừa khung
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 2.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
                                                 ) {
                                                     Text(
-                                                        text = "Âm lịch: Ngày ${lunarDate.day}/${lunarDate.month}${if (lunarDate.isLeap) " (Nhuận)" else ""}",
-                                                        color = Color(0xFFFDE047),
-                                                        fontSize = 11.5.sp,
-                                                        fontWeight = FontWeight.Bold
+                                                        text = "−",
+                                                        color = Color.White,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier
+                                                            .clip(CircleShape)
+                                                            .background(Color.White.copy(alpha = 0.15f))
+                                                            .clickable { viewModel.setBankQrScale(bankQrScale - 0.1f) }
+                                                            .padding(horizontal = 5.dp, vertical = 1.dp)
                                                     )
-                                                    if (showCanChi) {
-                                                        Text(
-                                                            text = "Năm ${lunarDate.canChiYear} • Giờ ${lunarDate.canChiDay}",
-                                                            color = Color.White.copy(alpha = 0.75f),
-                                                            fontSize = 8.5.sp
-                                                        )
-                                                    }
                                                     Text(
-                                                        text = "Chạm để xem lịch vạn niên đầy đủ",
-                                                        color = Color.White.copy(alpha = 0.45f),
-                                                        fontSize = 7.5.sp
+                                                        text = "${(bankQrScale * 100).toInt()}%",
+                                                        color = Color(0xFF67E8F9),
+                                                        fontSize = 8.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        modifier = Modifier
+                                                            .clickable { viewModel.setBankQrScale(1.0f) }
+                                                            .padding(horizontal = 2.dp)
+                                                    )
+                                                    Text(
+                                                        text = "+",
+                                                        color = Color.White,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier
+                                                            .clip(CircleShape)
+                                                            .background(Color.White.copy(alpha = 0.15f))
+                                                            .clickable { viewModel.setBankQrScale(bankQrScale + 0.1f) }
+                                                            .padding(horizontal = 5.dp, vertical = 1.dp)
                                                     )
                                                 }
+
+                                                Text(
+                                                    text = if (bankQrFitMode == "fit") "Vừa khung" else "Lấp đầy",
+                                                    color = Color(0xFFFBBF24),
+                                                    fontSize = 7.5.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(Color.White.copy(alpha = 0.12f))
+                                                        .clickable { viewModel.toggleBankQrFitMode() }
+                                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                                                )
+                                            }
+
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = "🔍 Phóng to",
+                                                    color = Color(0xFF60A5FA),
+                                                    fontSize = 8.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .clickable { viewModel.openBankQrZoom() }
+                                                        .padding(horizontal = 4.dp, vertical = 1.5.dp)
+                                                )
+                                                Text(
+                                                    text = "🔄 Đổi ảnh",
+                                                    color = Color(0xFFFDE047),
+                                                    fontSize = 8.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .clickable { onPickBankQr() }
+                                                        .padding(horizontal = 4.dp, vertical = 1.5.dp)
+                                                )
+                                            }
+                                        } else {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .weight(1f)
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .background(Color.White.copy(alpha = 0.06f))
+                                                    .clickable { onPickBankQr() }
+                                                    .padding(6.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.AddPhotoAlternate,
+                                                    contentDescription = null,
+                                                    tint = Color(0xFF38BDF8),
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                                Spacer(modifier = Modifier.height(3.dp))
+                                                Text(
+                                                    text = "Chọn ảnh QR ngân hàng",
+                                                    color = Color.White,
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    text = "Chạm để tải từ bộ nhớ máy",
+                                                    color = Color.White.copy(alpha = 0.6f),
+                                                    fontSize = 7.5.sp
+                                                )
+                                            }
+
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = Color(0xFF0284C7).copy(alpha = 0.4f),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable { onPickBankQr() }
+                                            ) {
+                                                Text(
+                                                    text = "Tải ảnh mã QR",
+                                                    color = Color(0xFF7DD3FC),
+                                                    fontSize = 8.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(vertical = 3.dp),
+                                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                                )
                                             }
                                         }
+
+                                        Text(
+                                            text = "👈 Lịch Vạn Niên • Vuốt sang Nhạc 👉",
+                                            color = Color.White.copy(alpha = 0.45f),
+                                            fontSize = 7.5.sp,
+                                            modifier = Modifier.clickable {
+                                                pagerScope.launch { leftPagerState.animateScrollToPage(0) }
+                                            }
+                                        )
                                     }
+                                }
                                     2 -> {
                                         // Ô 3: Trình phát nhạc
                                         if (currentTrack == null) {
@@ -874,30 +905,63 @@ fun DesktopArea(
                             }
                         }
                     }
+                }
 
                 // Widget 2: Giá Thị Trường (3 trang: 0 = Cà Phê & Vàng, 1 = Giá Xăng, 2 = Giá Dầu)
-                if (showMarketPrices) {
-                    Card(
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color.Black.copy(alpha = 0.38f)
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(196.dp)
-                            .border(
-                                1.dp,
-                                Brush.verticalGradient(
-                                    listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.08f))
-                                ),
-                                RoundedCornerShape(20.dp)
+                Card(
+                    shape = RoundedCornerShape(26.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.Transparent
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(200.dp)
+                        .shadow(16.dp, RoundedCornerShape(26.dp))
+                        .clip(RoundedCornerShape(26.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.28f),
+                                    Color.White.copy(alpha = 0.12f),
+                                    Color.Black.copy(alpha = 0.35f)
+                                )
                             )
-                            .testTag("market_prices_desktop_widget")
-                    ) {
+                        )
+                        .border(
+                            1.2.dp,
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.90f),
+                                    Color.White.copy(alpha = 0.20f),
+                                    Color.White.copy(alpha = 0.65f)
+                                )
+                            ),
+                            RoundedCornerShape(26.dp)
+                        )
+                        .testTag("market_prices_desktop_widget")
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // Top Specular Gloss Highlight (Liquid Glass Dome Shine)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                                .align(Alignment.TopCenter)
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color.White.copy(alpha = 0.35f),
+                                            Color.White.copy(alpha = 0.05f),
+                                            Color.Transparent
+                                        )
+                                    )
+                                )
+                        )
+
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(10.dp),
+                                .padding(11.dp),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
                             // Top Bar inside Right Card: Title + 3 Page Dots + Refresh
@@ -1081,7 +1145,7 @@ fun DesktopArea(
                                                             fontSize = 9.5.sp,
                                                             fontWeight = FontWeight.Bold
                                                         )
-                                                        val pepperPrice = marketPrices?.pepperPrice ?: "140.000 đ/kg"
+                                                        val pepperPrice = marketPrices?.pepperPrice ?: "137.500 đ/kg"
                                                         Text(
                                                             text = pepperPrice,
                                                             color = Color(0xFF34D399),
@@ -1102,9 +1166,11 @@ fun DesktopArea(
                                                         color = Color.White.copy(alpha = 0.65f),
                                                         fontSize = 7.5.sp
                                                     )
+                                                    val rawPepperChange = (marketPrices?.pepperChange ?: "-1.000").replace(" đ/kg", "").replace(" đ", "").trim()
+                                                    val displayChange = if (rawPepperChange.startsWith("-") || rawPepperChange.startsWith("+") || rawPepperChange == "0") rawPepperChange else "+$rawPepperChange"
                                                     Text(
-                                                        text = "Tiêu: ${marketPrices?.pepperChange ?: "0 đ"}",
-                                                        color = if ((marketPrices?.pepperChange ?: "").contains("-")) Color(0xFFF87171) else Color(0xFF34D399),
+                                                        text = "Tiêu: $displayChange đ",
+                                                        color = if (displayChange.contains("-")) Color(0xFFF87171) else Color(0xFF34D399),
                                                         fontSize = 7.5.sp,
                                                         fontWeight = FontWeight.SemiBold
                                                     )
@@ -1398,7 +1464,6 @@ fun DesktopArea(
                     ) { app ->
                         DesktopAppItem(
                             app = app,
-                            badgeCount = viewModel.getBadgeCount(app.packageName),
                             onLaunch = { viewModel.launchApp(context, app) },
                             onUnpin = { viewModel.unpinAppFromDesktop(app.packageName) }
                         )
@@ -1413,15 +1478,22 @@ fun DesktopArea(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
-                    color = Color.White.copy(alpha = 0.14f),
+                    shape = RoundedCornerShape(26.dp),
+                    color = Color.White.copy(alpha = 0.22f),
+                    shadowElevation = 8.dp,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onNavigateToLaunchpad() }
                         .border(
-                            1.dp,
-                            Color.White.copy(alpha = 0.2f),
-                            RoundedCornerShape(18.dp)
+                            1.2.dp,
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.85f),
+                                    Color.White.copy(alpha = 0.20f),
+                                    Color.White.copy(alpha = 0.60f)
+                                )
+                            ),
+                            RoundedCornerShape(26.dp)
                         )
                         .testTag("launchpad_swipe_guide_button")
                 ) {
@@ -1439,12 +1511,13 @@ fun DesktopArea(
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(RoundedCornerShape(14.dp))
                                     .background(
                                         Brush.linearGradient(
                                             listOf(Color(0xFFF472B6), Color(0xFFEC4899))
                                         )
-                                    ),
+                                    )
+                                    .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(14.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -1482,13 +1555,11 @@ fun DesktopArea(
         }
     }
 }
-}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DesktopAppItem(
     app: AppInfo,
-    badgeCount: Int,
     onLaunch: () -> Unit,
     onUnpin: () -> Unit
 ) {
@@ -1518,63 +1589,68 @@ private fun DesktopAppItem(
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             Box(contentAlignment = Alignment.TopEnd) {
+                // 3D Liquid Jelly Glass Icon Frame
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
-                    color = Color.White.copy(alpha = 0.22f),
-                    shadowElevation = 8.dp,
+                    shape = RoundedCornerShape(22.dp),
+                    color = Color.White.copy(alpha = 0.28f),
+                    shadowElevation = 10.dp,
                     modifier = Modifier
-                        .size(60.dp)
+                        .size(62.dp)
                         .border(
-                            width = 1.dp,
+                            width = 1.2.dp,
                             brush = Brush.verticalGradient(
                                 colors = listOf(
-                                    Color.White.copy(alpha = 0.65f),
-                                    Color.White.copy(alpha = 0.18f)
+                                    Color.White.copy(alpha = 0.90f),
+                                    Color.White.copy(alpha = 0.20f),
+                                    Color.White.copy(alpha = 0.65f)
                                 )
                             ),
-                            shape = RoundedCornerShape(18.dp)
+                            shape = RoundedCornerShape(22.dp)
                         )
                 ) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(5.dp)
-                            .clip(RoundedCornerShape(14.dp)),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (app.iconBitmap != null) {
-                            Image(
-                                bitmap = app.iconBitmap,
-                                contentDescription = app.label,
-                                modifier = Modifier.size(48.dp)
-                            )
-                        } else if (app.systemIconFallback != null) {
-                            Icon(
-                                imageVector = app.systemIconFallback,
-                                contentDescription = app.label,
-                                tint = Color.White,
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-                    }
-                }
-
-                // Notification Badge kèm số khi có thông báo
-                if (badgeCount > 0) {
-                    Box(
-                        modifier = Modifier
-                            .offset(x = 6.dp, y = (-4).dp)
-                            .background(Color(0xFFFF3B30), CircleShape)
-                            .border(1.5.dp, Color.White, CircleShape)
-                            .padding(horizontal = if (badgeCount > 9) 4.5.dp else 2.5.dp, vertical = 0.5.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = if (badgeCount > 99) "99+" else badgeCount.toString(),
-                            color = Color.White,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold
+                        // Top Specular Gloss Highlight (Liquid Dome Shine)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(28.dp)
+                                .align(Alignment.TopCenter)
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color.White.copy(alpha = 0.45f),
+                                            Color.White.copy(alpha = 0.08f),
+                                            Color.Transparent
+                                        )
+                                    )
+                                )
                         )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(5.dp)
+                                .clip(RoundedCornerShape(16.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (app.iconBitmap != null) {
+                                Image(
+                                    bitmap = app.iconBitmap,
+                                    contentDescription = app.label,
+                                    modifier = Modifier.size(50.dp)
+                                )
+                            } else if (app.systemIconFallback != null) {
+                                Icon(
+                                    imageVector = app.systemIconFallback,
+                                    contentDescription = app.label,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }

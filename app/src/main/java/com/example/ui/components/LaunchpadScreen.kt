@@ -238,17 +238,29 @@ fun LaunchpadScreen(
 
                 // Spotlight search field with Mic
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = Color.White.copy(alpha = 0.18f),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
-                    modifier = Modifier.weight(1f)
+                    shape = RoundedCornerShape(26.dp),
+                    color = Color.White.copy(alpha = 0.22f),
+                    shadowElevation = 8.dp,
+                    modifier = Modifier
+                        .weight(1f)
+                        .border(
+                            1.2.dp,
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.85f),
+                                    Color.White.copy(alpha = 0.20f),
+                                    Color.White.copy(alpha = 0.60f)
+                                )
+                            ),
+                            RoundedCornerShape(26.dp)
+                        )
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                            .padding(horizontal = 14.dp, vertical = 9.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Search,
@@ -469,7 +481,6 @@ fun LaunchpadScreen(
                                 viewModel.hideApp(app)
                             },
                             isPinnedToDesktop = viewModel.isAppPinnedToDesktop(app.packageName),
-                            badgeCount = viewModel.getBadgeCount(app.packageName),
                             onTogglePinToDesktop = {
                                 viewModel.togglePinAppToDesktop(app.packageName)
                             },
@@ -504,7 +515,6 @@ private fun LaunchpadAppItem(
     onDelete: () -> Unit,
     onHide: () -> Unit,
     isPinnedToDesktop: Boolean = false,
-    badgeCount: Int = 0,
     onTogglePinToDesktop: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -580,63 +590,67 @@ private fun LaunchpadAppItem(
 
         Box(contentAlignment = Alignment.TopEnd) {
             Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = Color.White.copy(alpha = 0.22f),
-                shadowElevation = if (isDraggingThis) 16.dp else 8.dp,
+                shape = RoundedCornerShape(22.dp),
+                color = Color.White.copy(alpha = 0.28f),
+                shadowElevation = if (isDraggingThis) 20.dp else 10.dp,
                 modifier = Modifier
                     .size(62.dp)
                     .border(
-                        width = 1.dp,
+                        width = 1.2.dp,
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                Color.White.copy(alpha = 0.65f),
-                                Color.White.copy(alpha = 0.18f)
+                                Color.White.copy(alpha = 0.90f),
+                                Color.White.copy(alpha = 0.20f),
+                                Color.White.copy(alpha = 0.65f)
                             )
                         ),
-                        shape = RoundedCornerShape(18.dp)
+                        shape = RoundedCornerShape(22.dp)
                     )
             ) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(5.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .then(backgroundModifier),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (app.iconBitmap != null) {
-                        Image(
-                            bitmap = app.iconBitmap,
-                            contentDescription = app.label,
-                            modifier = Modifier.size(50.dp)
-                        )
-                    } else if (app.systemIconFallback != null) {
-                        Icon(
-                            imageVector = app.systemIconFallback,
-                            contentDescription = app.label,
-                            tint = Color.White,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                }
-            }
-
-            // Notification Badge kèm số khi có thông báo
-            if (badgeCount > 0 && !isJiggleMode) {
-                Box(
-                    modifier = Modifier
-                        .offset(x = 6.dp, y = (-4).dp)
-                        .background(Color(0xFFFF3B30), CircleShape)
-                        .border(1.5.dp, Color.White, CircleShape)
-                        .padding(horizontal = if (badgeCount > 9) 4.5.dp else 2.5.dp, vertical = 0.5.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (badgeCount > 99) "99+" else badgeCount.toString(),
-                        color = Color.White,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold
+                    // Top Specular Gloss Highlight (Liquid Dome Shine)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.45f),
+                                        Color.White.copy(alpha = 0.08f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
                     )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(5.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .then(backgroundModifier),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (app.iconBitmap != null) {
+                            Image(
+                                bitmap = app.iconBitmap,
+                                contentDescription = app.label,
+                                modifier = Modifier.size(50.dp)
+                            )
+                        } else if (app.systemIconFallback != null) {
+                            Icon(
+                                imageVector = app.systemIconFallback,
+                                contentDescription = app.label,
+                                tint = Color.White,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
                 }
             }
 

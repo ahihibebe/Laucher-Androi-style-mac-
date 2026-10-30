@@ -65,44 +65,68 @@ fun MacDock(
             .padding(bottom = 12.dp, start = 20.dp, end = 20.dp),
         contentAlignment = Alignment.Center
     ) {
-        // macOS Dock Glass Shelf
+        // 3D Liquid Frosted Glass Shelf (RoundedCornerShape(32.dp))
         Surface(
-            shape = RoundedCornerShape(26.dp),
-            color = Color.White.copy(alpha = 0.22f),
-            shadowElevation = 18.dp,
+            shape = RoundedCornerShape(32.dp),
+            color = Color.White.copy(alpha = 0.25f),
+            shadowElevation = 20.dp,
             modifier = Modifier
                 .border(
-                    width = 1.dp,
+                    width = 1.2.dp,
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = 0.6f),
-                            Color.White.copy(alpha = 0.15f)
+                            Color.White.copy(alpha = 0.90f),
+                            Color.White.copy(alpha = 0.20f),
+                            Color.White.copy(alpha = 0.70f)
                         )
                     ),
-                    shape = RoundedCornerShape(26.dp)
+                    shape = RoundedCornerShape(32.dp)
                 )
         ) {
-            Row(
-                modifier = Modifier
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Exactly 4 App Slots
-                for (slotIndex in 0..3) {
-                    val app = dockApps.getOrNull(slotIndex)
-                    val badgeCount = if (app != null) viewModel.getBadgeCount(app.packageName) else 0
-                    DockItem(
-                        slotIndex = slotIndex,
-                        app = app,
-                        badgeCount = badgeCount,
-                        onLaunch = { appToLaunch ->
-                            viewModel.launchApp(context, appToLaunch)
-                        },
-                        onLongClick = {
-                            viewModel.openDockSlotPicker(slotIndex)
-                        }
+            Box(contentAlignment = Alignment.Center) {
+                // Top Specular Gloss Highlight across the dock shelf
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(32.dp))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(22.dp)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.35f),
+                                        Color.White.copy(alpha = 0.05f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
                     )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 11.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Exactly 4 App Slots
+                    for (slotIndex in 0..3) {
+                        val app = dockApps.getOrNull(slotIndex)
+                        DockItem(
+                            slotIndex = slotIndex,
+                            app = app,
+                            onLaunch = { appToLaunch ->
+                                viewModel.launchApp(context, appToLaunch)
+                            },
+                            onLongClick = {
+                                viewModel.openDockSlotPicker(slotIndex)
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -114,7 +138,6 @@ fun MacDock(
 private fun DockItem(
     slotIndex: Int,
     app: AppInfo?,
-    badgeCount: Int,
     onLaunch: (AppInfo) -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -155,72 +178,76 @@ private fun DockItem(
         }
 
         Box(contentAlignment = Alignment.TopEnd) {
-            // Translucent frosted glass frame for each dock icon
+            // 3D Liquid Jelly Glass frame for each dock icon
             Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = Color.White.copy(alpha = 0.22f),
-                shadowElevation = 8.dp,
+                shape = RoundedCornerShape(20.dp),
+                color = Color.White.copy(alpha = 0.28f),
+                shadowElevation = 10.dp,
                 modifier = Modifier
                     .size(56.dp)
                     .border(
-                        width = 1.dp,
+                        width = 1.2.dp,
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                Color.White.copy(alpha = 0.65f),
-                                Color.White.copy(alpha = 0.18f)
+                                Color.White.copy(alpha = 0.90f),
+                                Color.White.copy(alpha = 0.20f),
+                                Color.White.copy(alpha = 0.65f)
                             )
                         ),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(20.dp)
                     )
             ) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(4.dp)
-                        .clip(RoundedCornerShape(13.dp))
-                        .then(backgroundModifier),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (app?.iconBitmap != null) {
-                        Image(
-                            bitmap = app.iconBitmap,
-                            contentDescription = app.label,
-                            modifier = Modifier.size(48.dp)
-                        )
-                    } else if (app?.systemIconFallback != null) {
-                        Icon(
-                            imageVector = app.systemIconFallback,
-                            contentDescription = app.label,
-                            tint = Color.White,
-                            modifier = Modifier.size(26.dp)
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Chọn ứng dụng",
-                            tint = Color.White.copy(alpha = 0.7f),
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-            }
-
-            // Notification Badge kèm số khi có thông báo
-            if (badgeCount > 0) {
-                Box(
-                    modifier = Modifier
-                        .offset(x = 6.dp, y = (-4).dp)
-                        .background(Color(0xFFFF3B30), CircleShape)
-                        .border(1.5.dp, Color.White, CircleShape)
-                        .padding(horizontal = if (badgeCount > 9) 4.5.dp else 2.5.dp, vertical = 0.5.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (badgeCount > 99) "99+" else badgeCount.toString(),
-                        color = Color.White,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold
+                    // Top Dome Specular Highlight
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(25.dp)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.45f),
+                                        Color.White.copy(alpha = 0.08f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
                     )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(4.dp)
+                            .clip(RoundedCornerShape(15.dp))
+                            .then(backgroundModifier),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (app?.iconBitmap != null) {
+                            Image(
+                                bitmap = app.iconBitmap,
+                                contentDescription = app.label,
+                                modifier = Modifier.size(48.dp)
+                            )
+                        } else if (app?.systemIconFallback != null) {
+                            Icon(
+                                imageVector = app.systemIconFallback,
+                                contentDescription = app.label,
+                                tint = Color.White,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Chọn ứng dụng",
+                                tint = Color.White.copy(alpha = 0.7f),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
                 }
             }
         }

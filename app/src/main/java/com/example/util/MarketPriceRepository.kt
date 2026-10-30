@@ -30,8 +30,8 @@ class MarketPriceRepository {
         var dakNongPrice = "89.300 đ/kg"
         var avgCoffee = "89.100 đ/kg"
         var coffeeChange = "+200"
-        var pepperPrice = "140.000 đ/kg"
-        var pepperChange = "0 đ/kg"
+        var pepperPrice = "137.500 đ/kg"
+        var pepperChange = "-1.000 đ/kg"
         var lastUpdatedTime = now
 
         val headers = mapOf(
@@ -188,24 +188,72 @@ class MarketPriceRepository {
             PetrolPrice("Dầu Mazút 180CST 3.5S", "15.820 đ/kg", "16.130 đ/kg", "16.450 đ/kg", "+90 đ/kg")
         )
 
-        // 4. Fetch giá hồ tiêu từ https://giacaphe.com/gia-tieu-noi-dia/
-        try {
-            val reqBuilder = Request.Builder().url("https://giacaphe.com/gia-tieu-noi-dia/")
-            headers.forEach { (k, v) -> reqBuilder.header(k, v) }
-            val res = client.newCall(reqBuilder.build()).execute()
-            if (res.isSuccessful) {
-                val html = res.body?.string() ?: ""
-                val topMatch = Regex("""cao nhất\s*([0-9]{2,3}[.,][0-9]{3})""", RegexOption.IGNORE_CASE).find(html)
-                if (topMatch != null) {
-                    pepperPrice = topMatch.groupValues[1].replace(",", ".") + " đ/kg"
+        // 4. Fetch giá hồ tiêu từ https://giacaphe.com/gia-tieu-noi-dia/ và https://giacaphe.com/gia-tieu-hom-nay/
+        val pepperUrls = listOf("https://giacaphe.com/gia-tieu-noi-dia/", "https://giacaphe.com/gia-tieu-hom-nay/")
+        for (pUrl in pepperUrls) {
+            try {
+                val reqBuilder = Request.Builder().url(pUrl)
+                headers.forEach { (k, v) -> reqBuilder.header(k, v) }
+                val res = client.newCall(reqBuilder.build()).execute()
+                if (res.isSuccessful) {
+                    val html = res.body?.string() ?: ""
+                    var parsedPrice: String? = null
+
+                    // Cách 1: Tìm theo span class gt-cao-gia
+                    val gtCaoGiaMatch = Regex("""class=["']gt-cao-gia["']>([0-9]{2,3}[.,][0-9]{3})""").find(html)
+                    if (gtCaoGiaMatch != null) {
+                        parsedPrice = gtCaoGiaMatch.groupValues[1].replace(",", ".") + " đ/kg"
+                    }
+
+                    // Cách 2: Tìm theo meta description hoặc text "cao nhất"
+                    if (parsedPrice == null) {
+                        val metaMatch = Regex("""cao\s*nhất[^0-9]{0,35}([0-9]{2,3}[.,][0-9]{3})""", RegexOption.IGNORE_CASE).find(html)
+                        if (metaMatch != null) {
+                            parsedPrice = metaMatch.groupValues[1].replace(",", ".") + " đ/kg"
+                        }
+                    }
+
+                    // Cách 3: Tìm theo các hàng giá trong bảng tiêu (Gia Lai, Đắk Lắk, Bình Phước, Bà Rịa...)
+                    if (parsedPrice == null) {
+                        val tablePrices = Regex(""">([1-2][0-9]{2}[.,][0-9]{3})<""").findAll(html)
+                            .mapNotNull { it.groupValues[1].replace(".", "").replace(",", "").toIntOrNull() }
+                            .toList()
+                        if (tablePrices.isNotEmpty()) {
+                            val maxPrice = tablePrices.maxOrNull() ?: 137500
+                            parsedPrice = String.format(Locale.US, "%,d", maxPrice).replace(",", ".") + " đ/kg"
+                        }
+                    }
+
+                    if (parsedPrice != null) {
+                        pepperPrice = parsedPrice
+                    }
+
+                    // Tìm biến động giá tiêu
+                    val dataPriceMatch = Regex("""data-price=["']([0-9\-+]+)["']\s*class=["'][^"']*price_change""").find(html)
+                    if (dataPriceMatch != null) {
+                        val rawNum = dataPriceMatch.groupValues[1].toIntOrNull()
+                        if (rawNum != null) {
+                            pepperChange = if (rawNum > 0) "+${String.format(Locale.US, "%,d", rawNum).replace(",", ".")} đ/kg"
+                            else if (rawNum < 0) "${String.format(Locale.US, "%,d", rawNum).replace(",", ".")} đ/kg"
+                            else "0 đ/kg"
+                        }
+                    } else {
+                        val textChangeMatch = Regex("""(giảm|tăng)\s*(?:mạnh\s*)?([0-9.,]+)\s*(?:vnđ|đ|đồng)""", RegexOption.IGNORE_CASE).find(html)
+                        if (textChangeMatch != null) {
+                            val dir = textChangeMatch.groupValues[1].lowercase()
+                            val amt = textChangeMatch.groupValues[2].replace(",", ".")
+                            val sign = if (dir.contains("giảm")) "-" else "+"
+                            pepperChange = "$sign$amt đ/kg"
+                        }
+                    }
+
+                    if (parsedPrice != null) {
+                        break // Đã lấy được giá tiêu thực tế thành công
+                    }
                 }
-                val changeMatch = Regex("""(không thay đổi\s*0|tăng\s*[0-9]+|giảm\s*[0-9]+)""", RegexOption.IGNORE_CASE).find(html)
-                if (changeMatch != null) {
-                    pepperChange = changeMatch.groupValues[1]
-                }
+            } catch (e: Exception) {
+                // ignore và thử link kế tiếp nếu có
             }
-        } catch (e: Exception) {
-            // ignore
         }
 
         MarketPriceReport(
