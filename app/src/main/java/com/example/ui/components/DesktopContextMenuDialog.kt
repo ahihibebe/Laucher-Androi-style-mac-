@@ -28,7 +28,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.viewmodel.LauncherViewModel
 import com.example.viewmodel.SettingsCategory
 
@@ -48,16 +52,35 @@ fun DesktopContextMenuDialog(
     onPickImageFromDevice: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = Color(0xFF222222).copy(alpha = 0.95f),
-            shadowElevation = 24.dp,
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
             modifier = Modifier
-                .width(320.dp)
-                .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
-                .testTag("desktop_context_menu_dialog")
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.65f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss
+                ),
+            contentAlignment = Alignment.Center
         ) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFF222222).copy(alpha = 0.95f),
+                shadowElevation = 24.dp,
+                modifier = Modifier
+                    .width(320.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {} // prevent dismiss when clicking content
+                    )
+                    .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
+                    .testTag("desktop_context_menu_dialog")
+            ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -142,6 +165,7 @@ fun DesktopContextMenuDialog(
             }
         }
     }
+}
 }
 
 @Composable

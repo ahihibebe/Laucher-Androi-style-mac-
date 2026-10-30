@@ -16,6 +16,7 @@ import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -105,22 +106,38 @@ fun CoffeeOnlineDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Surface(
-            shape = RoundedCornerShape(26.dp),
-            color = Color(0xFF1E1E1E),
+        Box(
             modifier = Modifier
-                .fillMaxWidth(0.96f)
-                .fillMaxSize(0.90f)
-                .border(
-                    width = 1.2.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.85f), Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.60f))
-                    ),
-                    shape = RoundedCornerShape(26.dp)
-                )
-                .testTag("coffee_online_dialog")
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.65f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss
+                ),
+            contentAlignment = Alignment.Center
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
+            Surface(
+                shape = RoundedCornerShape(26.dp),
+                color = Color(0xFF1E1E1E),
+                modifier = Modifier
+                    .fillMaxWidth(0.96f)
+                    .fillMaxSize(0.90f)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {} // prevent dismiss when clicking content
+                    )
+                    .border(
+                        width = 1.2.dp,
+                        brush = Brush.verticalGradient(
+                            listOf(Color.White.copy(alpha = 0.85f), Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.60f))
+                        ),
+                        shape = RoundedCornerShape(26.dp)
+                    )
+                    .testTag("coffee_online_dialog")
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
                 // macOS Title Bar with Traffic Lights & Tab Switcher
                 Row(
                     modifier = Modifier
@@ -503,4 +520,5 @@ fun CoffeeOnlineDialog(
             }
         }
     }
+}
 }

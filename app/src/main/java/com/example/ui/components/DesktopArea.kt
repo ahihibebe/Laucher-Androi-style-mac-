@@ -246,7 +246,7 @@ fun DesktopArea(
                     ),
                     modifier = Modifier
                         .weight(1f)
-                        .height(200.dp)
+                        .height(210.dp)
                         .shadow(16.dp, RoundedCornerShape(26.dp))
                         .clip(RoundedCornerShape(26.dp))
                         .background(
@@ -915,7 +915,7 @@ fun DesktopArea(
                     ),
                     modifier = Modifier
                         .weight(1f)
-                        .height(200.dp)
+                        .height(210.dp)
                         .shadow(16.dp, RoundedCornerShape(26.dp))
                         .clip(RoundedCornerShape(26.dp))
                         .background(
@@ -1086,20 +1086,21 @@ fun DesktopArea(
                             ) { page ->
                                 when (page) {
                                     0 -> {
-                                        // Page 0: Coffee (Bỏ chữ 'giá tại :') & Gold (Click to open full gold dialog)
+                                        // Page 0: Cà phê (Lâm Đồng) & Giá Vàng (SJC, Nhẫn 9999)
                                         Column(
                                             modifier = Modifier
                                                 .fillMaxSize()
-                                                .padding(top = 4.dp),
+                                                .padding(top = 2.dp),
                                             verticalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            // Coffee & Pepper section
+                                            // Sub-card 1: Coffee & Pepper
                                             Column(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .background(Color.White.copy(alpha = 0.08f))
                                                     .clickable { viewModel.openCoffeeOnlineDialog() }
-                                                    .padding(vertical = 1.dp)
+                                                    .padding(horizontal = 7.dp, vertical = 4.dp)
                                             ) {
                                                 Row(
                                                     modifier = Modifier.fillMaxWidth(),
@@ -1115,13 +1116,13 @@ fun DesktopArea(
                                                             Text(
                                                                 text = "☕ Cà phê",
                                                                 color = Color(0xFFFED7AA),
-                                                                fontSize = 9.5.sp,
+                                                                fontSize = 9.sp,
                                                                 fontWeight = FontWeight.Bold
                                                             )
                                                             Text(
                                                                 text = "Lâm Đồng",
                                                                 color = Color(0xFF60A5FA),
-                                                                fontSize = 8.sp,
+                                                                fontSize = 7.5.sp,
                                                                 fontWeight = FontWeight.Bold
                                                             )
                                                         }
@@ -1129,7 +1130,7 @@ fun DesktopArea(
                                                         Text(
                                                             text = liveLamDongPrice,
                                                             color = Color(0xFFFBBF24),
-                                                            fontSize = 12.5.sp,
+                                                            fontSize = 11.5.sp,
                                                             fontWeight = FontWeight.Bold
                                                         )
                                                     }
@@ -1142,14 +1143,14 @@ fun DesktopArea(
                                                         Text(
                                                             text = "🌱 Giá tiêu",
                                                             color = Color(0xFFA7F3D0),
-                                                            fontSize = 9.5.sp,
+                                                            fontSize = 9.sp,
                                                             fontWeight = FontWeight.Bold
                                                         )
                                                         val pepperPrice = marketPrices?.pepperPrice ?: "137.500 đ/kg"
                                                         Text(
                                                             text = pepperPrice,
                                                             color = Color(0xFF34D399),
-                                                            fontSize = 12.5.sp,
+                                                            fontSize = 11.5.sp,
                                                             fontWeight = FontWeight.Bold
                                                         )
                                                     }
@@ -1162,16 +1163,16 @@ fun DesktopArea(
                                                 ) {
                                                     val cleanNum = (marketPrices?.lamDongCoffeePrice ?: "88.500").replace(" đ/kg", "").trim()
                                                     Text(
-                                                        text = "Di Linh/Bảo Lộc: $cleanNum đ",
+                                                        text = "Di Linh: $cleanNum đ",
                                                         color = Color.White.copy(alpha = 0.65f),
-                                                        fontSize = 7.5.sp
+                                                        fontSize = 7.sp
                                                     )
                                                     val rawPepperChange = (marketPrices?.pepperChange ?: "-1.000").replace(" đ/kg", "").replace(" đ", "").trim()
                                                     val displayChange = if (rawPepperChange.startsWith("-") || rawPepperChange.startsWith("+") || rawPepperChange == "0") rawPepperChange else "+$rawPepperChange"
                                                     Text(
                                                         text = "Tiêu: $displayChange đ",
                                                         color = if (displayChange.contains("-")) Color(0xFFF87171) else Color(0xFF34D399),
-                                                        fontSize = 7.5.sp,
+                                                        fontSize = 7.sp,
                                                         fontWeight = FontWeight.SemiBold
                                                     )
                                                 }
@@ -1183,26 +1184,27 @@ fun DesktopArea(
                                                 ) {
                                                     Box(
                                                         modifier = Modifier
-                                                            .size(4.dp)
+                                                            .size(3.5.dp)
                                                             .clip(CircleShape)
                                                             .background(Color(0xFF34D399))
                                                     )
                                                     Text(
                                                         text = "Cập nhật: ${marketPrices?.lastUpdated ?: "Thời gian thực"}",
                                                         color = Color(0xFF34D399),
-                                                        fontSize = 7.sp,
+                                                        fontSize = 6.5.sp,
                                                         maxLines = 1
                                                     )
                                                 }
                                             }
 
-                                            // Gold section - click to open full gold prices as requested
+                                            // Sub-card 2: Gold section - single row for SJC & Nhẫn
                                             Column(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .background(Color.White.copy(alpha = 0.08f))
                                                     .clickable { viewModel.openGoldPriceDialog() }
-                                                    .padding(vertical = 2.dp)
+                                                    .padding(horizontal = 7.dp, vertical = 4.dp)
                                             ) {
                                                 Row(
                                                     modifier = Modifier.fillMaxWidth(),
@@ -1212,31 +1214,40 @@ fun DesktopArea(
                                                     Text(
                                                         text = "🥇 Giá Vàng",
                                                         color = Color(0xFFFEF08A),
-                                                        fontSize = 10.5.sp,
+                                                        fontSize = 9.5.sp,
                                                         fontWeight = FontWeight.Bold
                                                     )
                                                     Text(
-                                                        text = "Xem đầy đủ >",
+                                                        text = "Chi tiết >",
                                                         color = Color(0xFF34D399),
-                                                        fontSize = 8.5.sp,
+                                                        fontSize = 8.sp,
                                                         fontWeight = FontWeight.SemiBold
                                                     )
                                                 }
                                                 val sjcGold = marketPrices?.goldPrices?.find { it.brand.contains("SJC") }
                                                     ?: marketPrices?.goldPrices?.firstOrNull()
-                                                Text(
-                                                    text = "SJC: ${sjcGold?.sellPrice ?: "142.000.000 đ"}",
-                                                    color = Color(0xFF4ADE80),
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.Bold
-                                                )
                                                 val ringGold = marketPrices?.goldPrices?.find { it.brand.contains("Nhẫn") }
-                                                Text(
-                                                    text = "Nhẫn 9999: ${ringGold?.sellPrice ?: "139.000.000 đ"}",
-                                                    color = Color(0xFFFDE047),
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Medium
-                                                )
+
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(top = 2.dp),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = "SJC: ${sjcGold?.sellPrice ?: "142.000.000 đ"}",
+                                                        color = Color(0xFF4ADE80),
+                                                        fontSize = 9.5.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                    Text(
+                                                        text = "Nhẫn: ${ringGold?.sellPrice ?: "139.000.000 đ"}",
+                                                        color = Color(0xFFFDE047),
+                                                        fontSize = 9.sp,
+                                                        fontWeight = FontWeight.SemiBold
+                                                    )
+                                                }
                                             }
 
                                             // Swipe right hint to Gasoline
@@ -1252,7 +1263,7 @@ fun DesktopArea(
                                                 Text(
                                                     text = "Cuộn sang phải xem Giá Xăng 👉",
                                                     color = Color(0xFFF97316),
-                                                    fontSize = 8.sp,
+                                                    fontSize = 7.5.sp,
                                                     fontWeight = FontWeight.Medium
                                                 )
                                             }
@@ -1266,63 +1277,68 @@ fun DesktopArea(
                                                 .padding(top = 2.dp),
                                             verticalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            Row(
+                                            Column(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
-                                                    .padding(horizontal = 4.dp, vertical = 2.dp),
-                                                horizontalArrangement = Arrangement.SpaceBetween
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .background(Color.White.copy(alpha = 0.08f))
+                                                    .padding(horizontal = 6.dp, vertical = 5.dp)
                                             ) {
-                                                Text("Loại xăng", color = Color.Gray, fontSize = 7.5.sp, modifier = Modifier.weight(1.1f))
-                                                Text("Vùng 1", color = Color(0xFF60A5FA), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
-                                                Text("Vùng 2", color = Color(0xFFFBBF24), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
-                                                Text("Vùng 3", color = Color(0xFFF87171), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
-                                            }
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth().padding(bottom = 3.dp),
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Text("Loại xăng", color = Color.Gray, fontSize = 7.5.sp, modifier = Modifier.weight(1.1f))
+                                                    Text("Vùng 1", color = Color(0xFF60A5FA), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
+                                                    Text("Vùng 2", color = Color(0xFFFBBF24), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
+                                                    Text("Vùng 3", color = Color(0xFFF87171), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
+                                                }
 
-                                            val gasolineItems = marketPrices?.petrolPrices ?: listOf(
-                                                com.example.model.PetrolPrice("RON 95-V", "21.490", "21.910", "22.340"),
-                                                com.example.model.PetrolPrice("RON 95-III", "21.010", "21.430", "21.850"),
-                                                com.example.model.PetrolPrice("E5 RON 92", "19.980", "20.370", "20.770")
-                                            )
+                                                val gasolineItems = marketPrices?.petrolPrices ?: listOf(
+                                                    com.example.model.PetrolPrice("RON 95-V", "21.490", "21.910", "22.340"),
+                                                    com.example.model.PetrolPrice("RON 95-III", "21.010", "21.430", "21.850"),
+                                                    com.example.model.PetrolPrice("E5 RON 92", "19.980", "20.370", "20.770")
+                                                )
 
-                                            Column(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                verticalArrangement = Arrangement.spacedBy(3.dp)
-                                            ) {
-                                                gasolineItems.take(3).forEach { fuel ->
-                                                    Row(
-                                                        modifier = Modifier.fillMaxWidth(),
-                                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                                        verticalAlignment = Alignment.CenterVertically
-                                                    ) {
-                                                        Text(
-                                                            text = fuel.fuelType.replace("Xăng ", ""),
-                                                            color = Color.White,
-                                                            fontSize = 8.sp,
-                                                            fontWeight = FontWeight.Medium,
-                                                            modifier = Modifier.weight(1.1f)
-                                                        )
-                                                        Text(
-                                                            text = fuel.region1Price.replace(" đ/lít", ""),
-                                                            color = Color(0xFF93C5FD),
-                                                            fontSize = 8.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            modifier = Modifier.weight(0.9f)
-                                                        )
-                                                        Text(
-                                                            text = fuel.region2Price.replace(" đ/lít", ""),
-                                                            color = Color(0xFFFDE047),
-                                                            fontSize = 8.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            modifier = Modifier.weight(0.9f)
-                                                        )
-                                                        Text(
-                                                            text = fuel.region3Price.replace(" đ/lít", ""),
-                                                            color = Color(0xFFFCA5A5),
-                                                            fontSize = 8.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            modifier = Modifier.weight(0.9f)
-                                                        )
+                                                Column(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                                                ) {
+                                                    gasolineItems.take(3).forEach { fuel ->
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Text(
+                                                                text = fuel.fuelType.replace("Xăng ", ""),
+                                                                color = Color.White,
+                                                                fontSize = 8.sp,
+                                                                fontWeight = FontWeight.Medium,
+                                                                modifier = Modifier.weight(1.1f)
+                                                            )
+                                                            Text(
+                                                                text = fuel.region1Price.replace(" đ/lít", ""),
+                                                                color = Color(0xFF93C5FD),
+                                                                fontSize = 8.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                modifier = Modifier.weight(0.9f)
+                                                            )
+                                                            Text(
+                                                                text = fuel.region2Price.replace(" đ/lít", ""),
+                                                                color = Color(0xFFFDE047),
+                                                                fontSize = 8.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                modifier = Modifier.weight(0.9f)
+                                                            )
+                                                            Text(
+                                                                text = fuel.region3Price.replace(" đ/lít", ""),
+                                                                color = Color(0xFFFCA5A5),
+                                                                fontSize = 8.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                modifier = Modifier.weight(0.9f)
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }
@@ -1340,7 +1356,7 @@ fun DesktopArea(
                                                 Text(
                                                     text = "Cuộn sang phải xem Giá Dầu 👉",
                                                     color = Color(0xFF38BDF8),
-                                                    fontSize = 8.sp,
+                                                    fontSize = 7.5.sp,
                                                     fontWeight = FontWeight.Medium
                                                 )
                                             }
@@ -1354,64 +1370,69 @@ fun DesktopArea(
                                                 .padding(top = 2.dp),
                                             verticalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            Row(
+                                            Column(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
-                                                    .padding(horizontal = 4.dp, vertical = 2.dp),
-                                                horizontalArrangement = Arrangement.SpaceBetween
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .background(Color.White.copy(alpha = 0.08f))
+                                                    .padding(horizontal = 6.dp, vertical = 5.dp)
                                             ) {
-                                                Text("Loại dầu", color = Color.Gray, fontSize = 7.5.sp, modifier = Modifier.weight(1.1f))
-                                                Text("Vùng 1", color = Color(0xFF60A5FA), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
-                                                Text("Vùng 2", color = Color(0xFFFBBF24), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
-                                                Text("Vùng 3", color = Color(0xFFF87171), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
-                                            }
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth().padding(bottom = 3.dp),
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Text("Loại dầu", color = Color.Gray, fontSize = 7.5.sp, modifier = Modifier.weight(1.1f))
+                                                    Text("Vùng 1", color = Color(0xFF60A5FA), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
+                                                    Text("Vùng 2", color = Color(0xFFFBBF24), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
+                                                    Text("Vùng 3", color = Color(0xFFF87171), fontSize = 7.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.9f))
+                                                }
 
-                                            val oilItems = marketPrices?.oilPrices ?: listOf(
-                                                com.example.model.PetrolPrice("DO 0.001S", "19.380", "19.760", "20.150"),
-                                                com.example.model.PetrolPrice("DO 0.05S", "18.980", "19.350", "19.730"),
-                                                com.example.model.PetrolPrice("Dầu Hỏa", "19.120", "19.500", "19.880"),
-                                                com.example.model.PetrolPrice("Mazút 180", "15.820", "16.130", "16.450")
-                                            )
+                                                val oilItems = marketPrices?.oilPrices ?: listOf(
+                                                    com.example.model.PetrolPrice("DO 0.05S", "18.980", "19.350", "19.730"),
+                                                    com.example.model.PetrolPrice("DO 0.001S", "19.380", "19.760", "20.150"),
+                                                    com.example.model.PetrolPrice("Dầu Hỏa", "19.120", "19.500", "19.880"),
+                                                    com.example.model.PetrolPrice("Mazút 180", "15.820", "16.130", "16.450")
+                                                )
 
-                                            Column(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                                            ) {
-                                                oilItems.take(4).forEach { fuel ->
-                                                    Row(
-                                                        modifier = Modifier.fillMaxWidth(),
-                                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                                        verticalAlignment = Alignment.CenterVertically
-                                                    ) {
-                                                        Text(
-                                                            text = fuel.fuelType.replace("Dầu ", ""),
-                                                            color = Color.White,
-                                                            fontSize = 8.sp,
-                                                            fontWeight = FontWeight.Medium,
-                                                            modifier = Modifier.weight(1.1f)
-                                                        )
-                                                        Text(
-                                                            text = fuel.region1Price.replace(" đ/lít", "").replace(" đ/kg", ""),
-                                                            color = Color(0xFF93C5FD),
-                                                            fontSize = 8.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            modifier = Modifier.weight(0.9f)
-                                                        )
-                                                        Text(
-                                                            text = fuel.region2Price.replace(" đ/lít", "").replace(" đ/kg", ""),
-                                                            color = Color(0xFFFDE047),
-                                                            fontSize = 8.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            modifier = Modifier.weight(0.9f)
-                                                        )
-                                                        Text(
-                                                            text = fuel.region3Price.replace(" đ/lít", "").replace(" đ/kg", ""),
-                                                            color = Color(0xFFFCA5A5),
-                                                            fontSize = 8.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            modifier = Modifier.weight(0.9f)
-                                                        )
+                                                Column(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                                                ) {
+                                                    oilItems.take(3).forEach { fuel ->
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Text(
+                                                                text = fuel.fuelType.replace("Dầu ", ""),
+                                                                color = Color.White,
+                                                                fontSize = 8.sp,
+                                                                fontWeight = FontWeight.Medium,
+                                                                modifier = Modifier.weight(1.1f)
+                                                            )
+                                                            Text(
+                                                                text = fuel.region1Price.replace(" đ/lít", "").replace(" đ/kg", ""),
+                                                                color = Color(0xFF93C5FD),
+                                                                fontSize = 8.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                modifier = Modifier.weight(0.9f)
+                                                            )
+                                                            Text(
+                                                                text = fuel.region2Price.replace(" đ/lít", "").replace(" đ/kg", ""),
+                                                                color = Color(0xFFFDE047),
+                                                                fontSize = 8.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                modifier = Modifier.weight(0.9f)
+                                                            )
+                                                            Text(
+                                                                text = fuel.region3Price.replace(" đ/lít", "").replace(" đ/kg", ""),
+                                                                color = Color(0xFFFCA5A5),
+                                                                fontSize = 8.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                modifier = Modifier.weight(0.9f)
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }
@@ -1429,7 +1450,7 @@ fun DesktopArea(
                                                 Text(
                                                     text = "👈 Cuộn trái xem Cà phê & Vàng",
                                                     color = Color(0xFF34D399),
-                                                    fontSize = 8.sp,
+                                                    fontSize = 7.5.sp,
                                                     fontWeight = FontWeight.Medium
                                                 )
                                             }

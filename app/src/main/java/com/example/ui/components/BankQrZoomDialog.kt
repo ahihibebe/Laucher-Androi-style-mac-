@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,20 +69,36 @@ fun BankQrZoomDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Surface(
-            shape = RoundedCornerShape(22.dp),
-            color = Color(0xFF1E1E1E),
+        Box(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .border(
-                    width = 1.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.1f))
-                    ),
-                    shape = RoundedCornerShape(22.dp)
-                )
-                .testTag("bank_qr_zoom_dialog")
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.65f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss
+                ),
+            contentAlignment = Alignment.Center
         ) {
+            Surface(
+                shape = RoundedCornerShape(22.dp),
+                color = Color(0xFF1E1E1E),
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {} // prevent dismiss when clicking content
+                    )
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.verticalGradient(
+                            listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.1f))
+                        ),
+                        shape = RoundedCornerShape(22.dp)
+                    )
+                    .testTag("bank_qr_zoom_dialog")
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -277,4 +294,5 @@ fun BankQrZoomDialog(
             }
         }
     }
+}
 }

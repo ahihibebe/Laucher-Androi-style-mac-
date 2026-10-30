@@ -3,6 +3,7 @@ package com.example.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -140,22 +141,38 @@ fun FullCalendarDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Surface(
-            shape = RoundedCornerShape(26.dp),
-            color = Color(0xFF1E1E1E),
+        Box(
             modifier = Modifier
-                .fillMaxWidth(0.96f)
-                .fillMaxHeight(0.92f)
-                .shadow(28.dp, RoundedCornerShape(26.dp))
-                .border(
-                    width = 1.2.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.85f), Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.60f))
-                    ),
-                    shape = RoundedCornerShape(26.dp)
-                )
-                .testTag("full_calendar_dialog")
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.65f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss
+                ),
+            contentAlignment = Alignment.Center
         ) {
+            Surface(
+                shape = RoundedCornerShape(26.dp),
+                color = Color(0xFF1E1E1E),
+                modifier = Modifier
+                    .fillMaxWidth(0.96f)
+                    .fillMaxHeight(0.92f)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {} // prevent dismiss when clicking content
+                    )
+                    .shadow(28.dp, RoundedCornerShape(26.dp))
+                    .border(
+                        width = 1.2.dp,
+                        brush = Brush.verticalGradient(
+                            listOf(Color.White.copy(alpha = 0.85f), Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.60f))
+                        ),
+                        shape = RoundedCornerShape(26.dp)
+                    )
+                    .testTag("full_calendar_dialog")
+            ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // macOS Title Bar with Traffic Lights
                 Row(
@@ -510,4 +527,5 @@ fun FullCalendarDialog(
             }
         }
     }
+}
 }

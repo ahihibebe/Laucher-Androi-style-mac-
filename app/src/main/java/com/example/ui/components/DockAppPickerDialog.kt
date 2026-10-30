@@ -25,7 +25,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.model.AppInfo
 
 @Composable
@@ -45,16 +48,35 @@ fun DockAppPickerDialog(
     onSelectApp: (AppInfo) -> Unit,
     onDismiss: () -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(18.dp),
-            color = Color(0xFF222222),
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
             modifier = Modifier
-                .fillMaxWidth(0.95f)
-                .fillMaxHeight(0.75f)
-                .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(18.dp))
-                .testTag("dock_app_picker_dialog")
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.65f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss
+                ),
+            contentAlignment = Alignment.Center
         ) {
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = Color(0xFF222222),
+                modifier = Modifier
+                    .fillMaxWidth(0.95f)
+                    .fillMaxHeight(0.75f)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {} // prevent dismiss when clicking content
+                    )
+                    .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(18.dp))
+                    .testTag("dock_app_picker_dialog")
+            ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Header
                 Row(
@@ -170,4 +192,5 @@ fun DockAppPickerDialog(
             }
         }
     }
+}
 }
