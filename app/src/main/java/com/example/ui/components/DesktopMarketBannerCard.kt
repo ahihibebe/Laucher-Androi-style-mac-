@@ -6,8 +6,8 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,8 +30,6 @@ import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -42,7 +40,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -65,48 +62,50 @@ fun DesktopMarketBannerCard(
     val pagerScope = rememberCoroutineScope()
     val isMarketRefreshing by viewModel.isMarketPricesRefreshing.collectAsState()
 
-    Card(
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        modifier = modifier
-            .fillMaxWidth()
-            .height(128.dp)
-            .shadow(16.dp, RoundedCornerShape(24.dp))
-            .clip(RoundedCornerShape(24.dp))
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.28f),
-                        Color.White.copy(alpha = 0.12f),
-                        Color.Black.copy(alpha = 0.35f)
-                    )
+    // Outer Liquid Glass Container - Surface paints background & border seamlessly edge-to-edge
+    Surface(
+        shape = RoundedCornerShape(26.dp),
+        color = Color.White.copy(alpha = 0.18f),
+        border = BorderStroke(
+            width = 1.2.dp,
+            brush = Brush.verticalGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.90f),
+                    Color.White.copy(alpha = 0.25f),
+                    Color.White.copy(alpha = 0.65f)
                 )
             )
-            .border(
-                1.2.dp,
-                Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.90f),
-                        Color.White.copy(alpha = 0.20f),
-                        Color.White.copy(alpha = 0.65f)
-                    )
-                ),
-                RoundedCornerShape(24.dp)
-            )
+        ),
+        shadowElevation = 14.dp,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(132.dp)
             .testTag("desktop_market_banner_widget")
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.22f),
+                            Color.White.copy(alpha = 0.08f),
+                            Color.Black.copy(alpha = 0.30f)
+                        )
+                    )
+                )
+        ) {
             // Top Specular Gloss Highlight (3D Liquid Glass Dome Shine)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
+                    .height(48.dp)
                     .align(Alignment.TopCenter)
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color.White.copy(alpha = 0.35f),
-                                Color.White.copy(alpha = 0.05f),
+                                Color.White.copy(alpha = 0.38f),
+                                Color.White.copy(alpha = 0.08f),
                                 Color.Transparent
                             )
                         )
@@ -250,7 +249,7 @@ fun DesktopMarketBannerCard(
                 ) { page ->
                     when (page) {
                         0 -> {
-                            // Page 0: 3 horizontal columns across full screen width (Cà phê, Hồ tiêu, Vàng SJC)
+                            // Page 0: 3 horizontal columns across full screen width (Cà phê, Hồ tiêu, Vàng Nhẫn SJC)
                             Row(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -260,23 +259,27 @@ fun DesktopMarketBannerCard(
                             ) {
                                 // Column 1: Cà phê (Lâm Đồng)
                                 Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = Color.White.copy(alpha = 0.08f),
-                                    shadowElevation = 4.dp,
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = Color.White.copy(alpha = 0.12f),
+                                    border = BorderStroke(
+                                        width = 0.9.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(
+                                                Color.White.copy(alpha = 0.50f),
+                                                Color.White.copy(alpha = 0.15f)
+                                            )
+                                        )
+                                    ),
+                                    shadowElevation = 3.dp,
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight()
-                                        .border(
-                                            0.8.dp,
-                                            Color.White.copy(alpha = 0.20f),
-                                            RoundedCornerShape(12.dp)
-                                        )
                                         .clickable { viewModel.openCoffeeOnlineDialog() }
                                 ) {
                                     Column(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .padding(horizontal = 6.dp, vertical = 5.dp),
+                                            .padding(horizontal = 7.dp, vertical = 6.dp),
                                         verticalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         Row(
@@ -287,7 +290,7 @@ fun DesktopMarketBannerCard(
                                             Text(
                                                 text = "☕ Cà phê",
                                                 color = Color(0xFFFED7AA),
-                                                fontSize = 9.sp,
+                                                fontSize = 8.5.sp,
                                                 fontWeight = FontWeight.Bold
                                             )
                                             Text(
@@ -302,7 +305,7 @@ fun DesktopMarketBannerCard(
                                         Text(
                                             text = liveLamDongPrice,
                                             color = Color(0xFFFBBF24),
-                                            fontSize = 11.5.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
@@ -311,7 +314,7 @@ fun DesktopMarketBannerCard(
                                         val cleanNum = liveLamDongPrice.replace(" đ/kg", "").trim()
                                         Text(
                                             text = "Di Linh: $cleanNum đ",
-                                            color = Color.White.copy(alpha = 0.65f),
+                                            color = Color.White.copy(alpha = 0.70f),
                                             fontSize = 7.5.sp,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
@@ -321,23 +324,27 @@ fun DesktopMarketBannerCard(
 
                                 // Column 2: Giá Hồ tiêu
                                 Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = Color.White.copy(alpha = 0.08f),
-                                    shadowElevation = 4.dp,
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = Color.White.copy(alpha = 0.12f),
+                                    border = BorderStroke(
+                                        width = 0.9.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(
+                                                Color.White.copy(alpha = 0.50f),
+                                                Color.White.copy(alpha = 0.15f)
+                                            )
+                                        )
+                                    ),
+                                    shadowElevation = 3.dp,
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight()
-                                        .border(
-                                            0.8.dp,
-                                            Color.White.copy(alpha = 0.20f),
-                                            RoundedCornerShape(12.dp)
-                                        )
                                         .clickable { viewModel.openCoffeeOnlineDialog() }
                                 ) {
                                     Column(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .padding(horizontal = 6.dp, vertical = 5.dp),
+                                            .padding(horizontal = 7.dp, vertical = 6.dp),
                                         verticalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         Row(
@@ -348,7 +355,7 @@ fun DesktopMarketBannerCard(
                                             Text(
                                                 text = "🌱 Hồ tiêu",
                                                 color = Color(0xFFA7F3D0),
-                                                fontSize = 9.sp,
+                                                fontSize = 8.5.sp,
                                                 fontWeight = FontWeight.Bold
                                             )
                                             val rawPepperChange = marketPrices.pepperChange.replace(" đ/kg", "").replace(" đ", "").trim()
@@ -365,7 +372,7 @@ fun DesktopMarketBannerCard(
                                         Text(
                                             text = pepperPrice,
                                             color = Color(0xFF34D399),
-                                            fontSize = 11.5.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
@@ -373,7 +380,7 @@ fun DesktopMarketBannerCard(
 
                                         Text(
                                             text = "Đắk Lắk • Gia Lai",
-                                            color = Color.White.copy(alpha = 0.65f),
+                                            color = Color.White.copy(alpha = 0.70f),
                                             fontSize = 7.5.sp,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
@@ -381,25 +388,29 @@ fun DesktopMarketBannerCard(
                                     }
                                 }
 
-                                // Column 3: Giá Vàng SJC
+                                // Column 3: Giá Vàng Nhẫn SJC (1 - 5 chỉ) - Vừa khung & Xem thêm hiển thị tất cả
                                 Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = Color.White.copy(alpha = 0.08f),
-                                    shadowElevation = 4.dp,
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = Color.White.copy(alpha = 0.12f),
+                                    border = BorderStroke(
+                                        width = 0.9.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(
+                                                Color.White.copy(alpha = 0.50f),
+                                                Color.White.copy(alpha = 0.15f)
+                                            )
+                                        )
+                                    ),
+                                    shadowElevation = 3.dp,
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight()
-                                        .border(
-                                            0.8.dp,
-                                            Color.White.copy(alpha = 0.20f),
-                                            RoundedCornerShape(12.dp)
-                                        )
                                         .clickable { viewModel.openGoldPriceDialog() }
                                 ) {
                                     Column(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .padding(horizontal = 6.dp, vertical = 5.dp),
+                                            .padding(horizontal = 7.dp, vertical = 6.dp),
                                         verticalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         Row(
@@ -408,34 +419,49 @@ fun DesktopMarketBannerCard(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = "👑 Vàng SJC",
+                                                text = "💍 Nhẫn SJC",
                                                 color = Color(0xFFFDE047),
-                                                fontSize = 9.sp,
-                                                fontWeight = FontWeight.Bold
+                                                fontSize = 8.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1
                                             )
                                             Text(
-                                                text = "Bảng vàng ↗",
-                                                color = Color(0xFFFDE047).copy(alpha = 0.8f),
-                                                fontSize = 7.5.sp,
-                                                fontWeight = FontWeight.Medium
+                                                text = "Xem thêm ↗",
+                                                color = Color(0xFF93C5FD),
+                                                fontSize = 7.sp,
+                                                fontWeight = FontWeight.SemiBold
                                             )
                                         }
 
-                                        val sjcSell = marketPrices.goldPrices.firstOrNull { it.brand.contains("SJC") }?.sellPrice ?: "142.000.000 đ"
+                                        val nhanItem = marketPrices.goldPrices.firstOrNull {
+                                            it.brand.contains("1-5 chỉ") || it.brand.contains("Nhẫn SJC")
+                                        } ?: marketPrices.goldPrices.firstOrNull { it.brand.contains("Nhẫn") }
+
                                         Text(
-                                            text = sjcSell,
+                                            text = "(1 - 5 chỉ)",
+                                            color = Color(0xFFFDE047).copy(alpha = 0.85f),
+                                            fontSize = 7.5.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+
+                                        val rawSell = nhanItem?.sellPrice ?: "139.000.000 đ"
+                                        val rawBuy = nhanItem?.buyPrice ?: "135.000.000 đ"
+                                        val displaySell = rawSell.replace(" đ", "").trim()
+                                        val displayBuy = rawBuy.replace(" đ", "").trim()
+
+                                        Text(
+                                            text = "Bán: $displaySell",
                                             color = Color(0xFFFDE047),
-                                            fontSize = 11.5.sp,
+                                            fontSize = 9.5.sp,
                                             fontWeight = FontWeight.Bold,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
 
-                                        val nhanSell = marketPrices.goldPrices.firstOrNull { it.brand.contains("Nhẫn") }?.sellPrice ?: "139.000.000 đ"
                                         Text(
-                                            text = "Nhẫn: $nhanSell",
-                                            color = Color.White.copy(alpha = 0.70f),
-                                            fontSize = 7.5.sp,
+                                            text = "Mua: $displayBuy",
+                                            color = Color.White.copy(alpha = 0.75f),
+                                            fontSize = 8.sp,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
@@ -460,17 +486,26 @@ fun DesktopMarketBannerCard(
 
                                 gasItems.forEach { item ->
                                     Surface(
-                                        shape = RoundedCornerShape(12.dp),
-                                        color = Color.White.copy(alpha = 0.08f),
+                                        shape = RoundedCornerShape(14.dp),
+                                        color = Color.White.copy(alpha = 0.12f),
+                                        border = BorderStroke(
+                                            width = 0.9.dp,
+                                            brush = Brush.verticalGradient(
+                                                listOf(
+                                                    Color.White.copy(alpha = 0.45f),
+                                                    Color.White.copy(alpha = 0.12f)
+                                                )
+                                            )
+                                        ),
+                                        shadowElevation = 3.dp,
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxHeight()
-                                            .border(0.8.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(12.dp))
                                     ) {
                                         Column(
                                             modifier = Modifier
                                                 .fillMaxSize()
-                                                .padding(horizontal = 6.dp, vertical = 5.dp),
+                                                .padding(horizontal = 7.dp, vertical = 6.dp),
                                             verticalArrangement = Arrangement.SpaceBetween
                                         ) {
                                             Text(
@@ -483,13 +518,13 @@ fun DesktopMarketBannerCard(
                                             Text(
                                                 text = item.second,
                                                 color = Color(0xFFF97316),
-                                                fontSize = 11.5.sp,
+                                                fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 maxLines = 1
                                             )
                                             Text(
                                                 text = item.third,
-                                                color = Color.White.copy(alpha = 0.65f),
+                                                color = Color.White.copy(alpha = 0.70f),
                                                 fontSize = 7.5.sp,
                                                 maxLines = 1
                                             )
@@ -515,17 +550,26 @@ fun DesktopMarketBannerCard(
 
                                 oilItems.forEach { item ->
                                     Surface(
-                                        shape = RoundedCornerShape(12.dp),
-                                        color = Color.White.copy(alpha = 0.08f),
+                                        shape = RoundedCornerShape(14.dp),
+                                        color = Color.White.copy(alpha = 0.12f),
+                                        border = BorderStroke(
+                                            width = 0.9.dp,
+                                            brush = Brush.verticalGradient(
+                                                listOf(
+                                                    Color.White.copy(alpha = 0.45f),
+                                                    Color.White.copy(alpha = 0.12f)
+                                                )
+                                            )
+                                        ),
+                                        shadowElevation = 3.dp,
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxHeight()
-                                            .border(0.8.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(12.dp))
                                     ) {
                                         Column(
                                             modifier = Modifier
                                                 .fillMaxSize()
-                                                .padding(horizontal = 6.dp, vertical = 5.dp),
+                                                .padding(horizontal = 7.dp, vertical = 6.dp),
                                             verticalArrangement = Arrangement.SpaceBetween
                                         ) {
                                             Text(
@@ -538,13 +582,13 @@ fun DesktopMarketBannerCard(
                                             Text(
                                                 text = item.second,
                                                 color = Color(0xFF38BDF8),
-                                                fontSize = 11.5.sp,
+                                                fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 maxLines = 1
                                             )
                                             Text(
                                                 text = item.third,
-                                                color = Color.White.copy(alpha = 0.65f),
+                                                color = Color.White.copy(alpha = 0.70f),
                                                 fontSize = 7.5.sp,
                                                 maxLines = 1
                                             )

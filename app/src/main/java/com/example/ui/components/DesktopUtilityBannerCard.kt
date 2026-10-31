@@ -10,6 +10,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,8 +42,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.ZoomIn
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
@@ -95,48 +94,50 @@ fun DesktopUtilityBannerCard(
     val context = LocalContext.current
     val pagerScope = rememberCoroutineScope()
 
-    Card(
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+    // Outer Liquid Glass Container - Surface paints background & border seamlessly edge-to-edge
+    Surface(
+        shape = RoundedCornerShape(26.dp),
+        color = Color.White.copy(alpha = 0.18f),
+        border = BorderStroke(
+            width = 1.2.dp,
+            brush = Brush.verticalGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.90f),
+                    Color.White.copy(alpha = 0.25f),
+                    Color.White.copy(alpha = 0.65f)
+                )
+            )
+        ),
+        shadowElevation = 14.dp,
         modifier = modifier
             .fillMaxWidth()
             .height(134.dp)
-            .shadow(16.dp, RoundedCornerShape(24.dp))
-            .clip(RoundedCornerShape(24.dp))
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.28f),
-                        Color.White.copy(alpha = 0.12f),
-                        Color.Black.copy(alpha = 0.35f)
-                    )
-                )
-            )
-            .border(
-                1.2.dp,
-                Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.90f),
-                        Color.White.copy(alpha = 0.20f),
-                        Color.White.copy(alpha = 0.65f)
-                    )
-                ),
-                RoundedCornerShape(24.dp)
-            )
             .testTag("desktop_utility_banner_widget")
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.22f),
+                            Color.White.copy(alpha = 0.08f),
+                            Color.Black.copy(alpha = 0.30f)
+                        )
+                    )
+                )
+        ) {
             // Top Specular Gloss Highlight (3D Liquid Glass Dome Shine)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
+                    .height(48.dp)
                     .align(Alignment.TopCenter)
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color.White.copy(alpha = 0.35f),
-                                Color.White.copy(alpha = 0.05f),
+                                Color.White.copy(alpha = 0.38f),
+                                Color.White.copy(alpha = 0.08f),
                                 Color.Transparent
                             )
                         )
@@ -285,22 +286,22 @@ fun DesktopUtilityBannerCard(
 
                                 // Right Column: Optimized 3D Frosted Glass Subcard for Lunar Date & Can Chi
                                 Surface(
-                                    shape = RoundedCornerShape(14.dp),
-                                    color = Color.White.copy(alpha = 0.12f),
-                                    shadowElevation = 6.dp,
+                                    shape = RoundedCornerShape(15.dp),
+                                    color = Color.White.copy(alpha = 0.14f),
+                                    border = BorderStroke(
+                                        width = 1.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(
+                                                Color.White.copy(alpha = 0.55f),
+                                                Color.White.copy(alpha = 0.15f)
+                                            )
+                                        )
+                                    ),
+                                    shadowElevation = 3.dp,
                                     modifier = Modifier
                                         .weight(1.35f)
                                         .fillMaxHeight()
-                                        .border(
-                                            1.dp,
-                                            Brush.verticalGradient(
-                                                listOf(
-                                                    Color.White.copy(alpha = 0.60f),
-                                                    Color.White.copy(alpha = 0.15f)
-                                                )
-                                            ),
-                                            RoundedCornerShape(14.dp)
-                                        )
+                                        .clickable { viewModel.openFullCalendarDialog() }
                                 ) {
                                     Column(
                                         modifier = Modifier
@@ -450,46 +451,61 @@ fun DesktopUtilityBannerCard(
                                     }
                                 } else {
                                     // Empty State: Click directly to select QR image
-                                    Row(
+                                    Surface(
+                                        shape = RoundedCornerShape(15.dp),
+                                        color = Color.White.copy(alpha = 0.12f),
+                                        border = BorderStroke(
+                                            width = 1.dp,
+                                            brush = Brush.verticalGradient(
+                                                listOf(
+                                                    Color.White.copy(alpha = 0.50f),
+                                                    Color.White.copy(alpha = 0.15f)
+                                                )
+                                            )
+                                        ),
+                                        shadowElevation = 3.dp,
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .clip(RoundedCornerShape(14.dp))
-                                            .background(Color.White.copy(alpha = 0.10f))
                                             .clickable { onPickBankQr() }
-                                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Box(
+                                        Row(
                                             modifier = Modifier
-                                                .size(54.dp)
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .background(Color(0xFF38BDF8).copy(alpha = 0.25f)),
-                                            contentAlignment = Alignment.Center
+                                                .fillMaxSize()
+                                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.AddPhotoAlternate,
-                                                contentDescription = null,
-                                                tint = Color(0xFF38BDF8),
-                                                modifier = Modifier.size(28.dp)
-                                            )
-                                        }
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(54.dp)
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .background(Color(0xFF38BDF8).copy(alpha = 0.25f)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.AddPhotoAlternate,
+                                                    contentDescription = null,
+                                                    tint = Color(0xFF38BDF8),
+                                                    modifier = Modifier.size(28.dp)
+                                                )
+                                            }
 
-                                        Column(
-                                            modifier = Modifier.weight(1f),
-                                            verticalArrangement = Arrangement.Center
-                                        ) {
-                                            Text(
-                                                text = "Chọn ảnh mã QR Ngân Hàng",
-                                                color = Color.White,
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            Text(
-                                                text = "Chạm vào đây để tải ảnh QR từ máy / thẻ nhớ",
-                                                color = Color(0xFF7DD3FC),
-                                                fontSize = 9.sp
-                                            )
+                                            Column(
+                                                modifier = Modifier.weight(1f),
+                                                verticalArrangement = Arrangement.Center
+                                            ) {
+                                                Text(
+                                                    text = "Chọn ảnh mã QR Ngân Hàng",
+                                                    color = Color.White,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    text = "Chạm vào đây để tải ảnh QR từ máy / thẻ nhớ",
+                                                    color = Color(0xFF7DD3FC),
+                                                    fontSize = 9.sp
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -508,67 +524,82 @@ fun DesktopUtilityBannerCard(
                                     }
                                 }
 
-                                Row(
+                                Surface(
+                                    shape = RoundedCornerShape(15.dp),
+                                    color = Color.White.copy(alpha = 0.12f),
+                                    border = BorderStroke(
+                                        width = 1.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(
+                                                Color.White.copy(alpha = 0.50f),
+                                                Color.White.copy(alpha = 0.15f)
+                                            )
+                                        )
+                                    ),
+                                    shadowElevation = 3.dp,
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(Color.White.copy(alpha = 0.10f))
                                         .clickable { triggerScan() }
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Box(
+                                    Row(
                                         modifier = Modifier
-                                            .size(54.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                Brush.linearGradient(
-                                                    listOf(Color(0xFFF43F5E), Color(0xFFBE123C))
-                                                )
-                                            ),
-                                        contentAlignment = Alignment.Center
+                                            .fillMaxSize()
+                                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.MusicNote,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(28.dp)
-                                        )
-                                    }
-
-                                    Column(
-                                        modifier = Modifier.weight(1f),
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Text(
-                                            text = "Chưa có nhạc • Chạm để quét ngay",
-                                            color = Color.White,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = musicScanStatus ?: "Chạm vào chữ này để quét bài hát từ máy hoặc thẻ nhớ",
-                                            color = Color(0xFFFDA4AF),
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = Color(0xFFE11D48).copy(alpha = 0.85f),
-                                        modifier = Modifier.clickable { triggerScan() }
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        Box(
+                                            modifier = Modifier
+                                                .size(54.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    Brush.linearGradient(
+                                                        listOf(Color(0xFFF43F5E), Color(0xFFBE123C))
+                                                    )
+                                                ),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(11.dp))
-                                            Text("Quét", color = Color.White, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+                                            Icon(
+                                                imageVector = Icons.Default.MusicNote,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(28.dp)
+                                            )
+                                        }
+
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Text(
+                                                text = "Chưa có nhạc • Chạm để quét ngay",
+                                                color = Color.White,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = musicScanStatus ?: "Chạm vào chữ này để quét bài hát từ máy hoặc thẻ nhớ",
+                                                color = Color(0xFFFDA4AF),
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color(0xFFE11D48).copy(alpha = 0.85f),
+                                            modifier = Modifier.clickable { triggerScan() }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(11.dp))
+                                                Text("Quét", color = Color.White, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+                                            }
                                         }
                                     }
                                 }
