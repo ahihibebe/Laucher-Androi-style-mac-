@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -77,6 +78,8 @@ fun DesktopUtilityBannerCard(
     formattedTime: String,
     formattedDate: String,
     lunarDate: LunarDate,
+    showClock: Boolean = true,
+    showLunar: Boolean = true,
     showCanChi: Boolean,
     bankQrUri: String?,
     bankQrFitMode: String,
@@ -218,30 +221,49 @@ fun DesktopUtilityBannerCard(
                         }
                     }
 
-                    // 3 Page Switcher Dots
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        repeat(3) { idx ->
-                            Box(
-                                modifier = Modifier
-                                    .size(if (leftPagerState.currentPage == idx) 6.dp else 4.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (leftPagerState.currentPage == idx) {
-                                            when (idx) {
-                                                0 -> Color(0xFFFFB74D)
-                                                1 -> Color(0xFF38BDF8)
-                                                else -> Color(0xFFF43F5E)
-                                            }
-                                        } else Color.White.copy(alpha = 0.35f)
-                                    )
-                                    .clickable {
-                                        pagerScope.launch { leftPagerState.animateScrollToPage(idx) }
-                                    }
-                            )
+                        // 3 Page Switcher Dots
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            repeat(3) { idx ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(if (leftPagerState.currentPage == idx) 6.dp else 4.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (leftPagerState.currentPage == idx) {
+                                                when (idx) {
+                                                    0 -> Color(0xFFFFB74D)
+                                                    1 -> Color(0xFF38BDF8)
+                                                    else -> Color(0xFFF43F5E)
+                                                }
+                                            } else Color.White.copy(alpha = 0.35f)
+                                        )
+                                        .clickable {
+                                            pagerScope.launch { leftPagerState.animateScrollToPage(idx) }
+                                        }
+                                )
+                            }
                         }
+
+                        // Subtle close button to turn off / hide widget
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Ẩn widget tiện ích",
+                            tint = Color.White.copy(alpha = 0.55f),
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    viewModel.triggerVibration()
+                                    viewModel.hideUtilityWidget()
+                                }
+                        )
                     }
                 }
 
@@ -254,37 +276,126 @@ fun DesktopUtilityBannerCard(
                 ) { page ->
                     when (page) {
                         0 -> {
-                            // Page 0: Lịch Vạn Niên & Đồng Hồ (Horizontal 2 columns)
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clickable { viewModel.openFullCalendarDialog() },
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Left Column: Large Digital Clock & Solar Date
+                            // Page 0: Lịch Vạn Niên & Đồng Hồ
+                            if (showClock && showLunar) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clickable { viewModel.openFullCalendarDialog() },
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Left Column: Large Digital Clock & Solar Date
+                                    Column(
+                                        modifier = Modifier.weight(0.95f),
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = formattedTime,
+                                            color = Color.White,
+                                            fontSize = 27.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            lineHeight = 28.sp
+                                        )
+                                        Text(
+                                            text = formattedDate,
+                                            color = Color.White.copy(alpha = 0.85f),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+
+                                    // Right Column: Optimized 3D Frosted Glass Subcard for Lunar Date & Can Chi
+                                    Surface(
+                                        shape = RoundedCornerShape(15.dp),
+                                        color = Color.White.copy(alpha = 0.14f),
+                                        border = BorderStroke(
+                                            width = 1.dp,
+                                            brush = Brush.verticalGradient(
+                                                listOf(
+                                                    Color.White.copy(alpha = 0.55f),
+                                                    Color.White.copy(alpha = 0.15f)
+                                                )
+                                            )
+                                        ),
+                                        shadowElevation = 3.dp,
+                                        modifier = Modifier
+                                            .weight(1.35f)
+                                            .fillMaxHeight()
+                                            .clickable { viewModel.openFullCalendarDialog() }
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(horizontal = 9.dp, vertical = 6.dp),
+                                            verticalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = "Âm lịch: Ngày ${lunarDate.day}/${lunarDate.month}${if (lunarDate.isLeap) " (Nhuận)" else ""}",
+                                                    color = Color(0xFFFDE047),
+                                                    fontSize = 12.5.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    text = "Xem lịch ↗",
+                                                    color = Color(0xFF93C5FD),
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
+
+                                            if (showCanChi) {
+                                                Text(
+                                                    text = "Năm ${lunarDate.canChiYear} • Giờ ${lunarDate.canChiDay}",
+                                                    color = Color.White.copy(alpha = 0.85f),
+                                                    fontSize = 9.5.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+
+                                            Text(
+                                                text = "Tiết khí: ${com.example.util.LunarCalendarHelper.getTietKhi(lunarDate.solarMonth, lunarDate.solarDay)}",
+                                                color = Color.White.copy(alpha = 0.65f),
+                                                fontSize = 8.5.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                            } else if (showClock) {
+                                // Only Clock visible
                                 Column(
-                                    modifier = Modifier.weight(0.95f),
-                                    verticalArrangement = Arrangement.Center
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clickable { viewModel.openFullCalendarDialog() },
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Text(
                                         text = formattedTime,
                                         color = Color.White,
-                                        fontSize = 27.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        lineHeight = 28.sp
+                                        fontSize = 32.sp,
+                                        fontWeight = FontWeight.Bold
                                     )
                                     Text(
                                         text = formattedDate,
                                         color = Color.White.copy(alpha = 0.85f),
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium
                                     )
                                 }
-
-                                // Right Column: Optimized 3D Frosted Glass Subcard for Lunar Date & Can Chi
+                            } else {
+                                // Only Lunar Calendar visible
                                 Surface(
                                     shape = RoundedCornerShape(15.dp),
                                     color = Color.White.copy(alpha = 0.14f),
@@ -299,15 +410,14 @@ fun DesktopUtilityBannerCard(
                                     ),
                                     shadowElevation = 3.dp,
                                     modifier = Modifier
-                                        .weight(1.35f)
-                                        .fillMaxHeight()
+                                        .fillMaxSize()
                                         .clickable { viewModel.openFullCalendarDialog() }
                                 ) {
                                     Column(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .padding(horizontal = 9.dp, vertical = 6.dp),
-                                        verticalArrangement = Arrangement.SpaceBetween
+                                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                                        verticalArrangement = Arrangement.SpaceAround
                                     ) {
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
@@ -317,13 +427,13 @@ fun DesktopUtilityBannerCard(
                                             Text(
                                                 text = "Âm lịch: Ngày ${lunarDate.day}/${lunarDate.month}${if (lunarDate.isLeap) " (Nhuận)" else ""}",
                                                 color = Color(0xFFFDE047),
-                                                fontSize = 12.5.sp,
+                                                fontSize = 14.sp,
                                                 fontWeight = FontWeight.Bold
                                             )
                                             Text(
-                                                text = "Xem lịch ↗",
+                                                text = "Xem lịch đầy đủ ↗",
                                                 color = Color(0xFF93C5FD),
-                                                fontSize = 9.sp,
+                                                fontSize = 10.sp,
                                                 fontWeight = FontWeight.SemiBold
                                             )
                                         }
@@ -332,19 +442,15 @@ fun DesktopUtilityBannerCard(
                                             Text(
                                                 text = "Năm ${lunarDate.canChiYear} • Giờ ${lunarDate.canChiDay}",
                                                 color = Color.White.copy(alpha = 0.85f),
-                                                fontSize = 9.5.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Medium
                                             )
                                         }
 
                                         Text(
                                             text = "Tiết khí: ${com.example.util.LunarCalendarHelper.getTietKhi(lunarDate.solarMonth, lunarDate.solarDay)}",
-                                            color = Color.White.copy(alpha = 0.65f),
-                                            fontSize = 8.5.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            color = Color.White.copy(alpha = 0.70f),
+                                            fontSize = 9.5.sp
                                         )
                                     }
                                 }

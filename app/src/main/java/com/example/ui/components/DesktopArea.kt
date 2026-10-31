@@ -236,34 +236,46 @@ fun DesktopArea(
                 }
             }
 
-            // Widget 1: Banner Card (Lịch Vạn Niên & Đồng Hồ, QR Ngân Hàng, Trình Phát Nhạc)
-            DesktopUtilityBannerCard(
-                leftPagerState = leftPagerState,
-                formattedTime = formattedTime,
-                formattedDate = formattedDate,
-                lunarDate = lunarDate,
-                showCanChi = showCanChi,
-                bankQrUri = bankQrUri,
-                bankQrFitMode = bankQrFitMode,
-                bankQrScale = bankQrScale,
-                onPickBankQr = onPickBankQr,
-                currentTrack = currentTrack,
-                isMusicPlaying = isMusicPlaying,
-                musicProgressSeconds = musicProgressSeconds,
-                musicScanStatus = musicScanStatus,
-                audioPermission = audioPermission,
-                audioPermissionLauncher = audioPermissionLauncher,
-                viewModel = viewModel
-            )
+            val showUtilityWidget by viewModel.showUtilityWidget.collectAsState()
+            val isWidget1Visible = showUtilityWidget && (showClock || showLunar)
+            val isWidget2Visible = showMarketPrices
 
-            Spacer(modifier = Modifier.height(10.dp))
+            // Widget 1: Banner Card (Lịch Vạn Niên & Đồng Hồ, QR Ngân Hàng, Trình Phát Nhạc)
+            if (isWidget1Visible) {
+                DesktopUtilityBannerCard(
+                    leftPagerState = leftPagerState,
+                    formattedTime = formattedTime,
+                    formattedDate = formattedDate,
+                    lunarDate = lunarDate,
+                    showClock = showClock,
+                    showLunar = showLunar,
+                    showCanChi = showCanChi,
+                    bankQrUri = bankQrUri,
+                    bankQrFitMode = bankQrFitMode,
+                    bankQrScale = bankQrScale,
+                    onPickBankQr = onPickBankQr,
+                    currentTrack = currentTrack,
+                    isMusicPlaying = isMusicPlaying,
+                    musicProgressSeconds = musicProgressSeconds,
+                    musicScanStatus = musicScanStatus,
+                    audioPermission = audioPermission,
+                    audioPermissionLauncher = audioPermissionLauncher,
+                    viewModel = viewModel
+                )
+            }
+
+            if (isWidget1Visible && isWidget2Visible) {
+                Spacer(modifier = Modifier.height(10.dp))
+            }
 
             // Widget 2: Banner Card Giá Thị Trường (Cà Phê & Vàng, Giá Xăng, Giá Dầu)
-            DesktopMarketBannerCard(
-                marketPagerState = marketPagerState,
-                marketPrices = currentPrices,
-                viewModel = viewModel
-            )
+            if (isWidget2Visible) {
+                DesktopMarketBannerCard(
+                    marketPagerState = marketPagerState,
+                    marketPrices = currentPrices,
+                    viewModel = viewModel
+                )
+            }
 
             // Desktop Pinned Apps Grid (Apps pinned to home screen from Launchpad)
             val desktopPinnedApps by viewModel.desktopPinnedApps.collectAsState()

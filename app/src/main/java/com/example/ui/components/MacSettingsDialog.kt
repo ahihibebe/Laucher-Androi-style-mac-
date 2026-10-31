@@ -526,6 +526,29 @@ private fun ClockAndLunarSettingsPane(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
+                val showUtilityWidget by viewModel.showUtilityWidget.collectAsState()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Bật Widget Tiện ích trên màn hình", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
+                        Text("Tắt công tắc này để ẩn hoàn toàn widget (Đồng hồ, Lịch, QR, Nhạc)", color = Color(0xFFFFB74D), fontSize = 10.5.sp)
+                    }
+                    Switch(
+                        checked = showUtilityWidget && (showClock || showLunar),
+                        onCheckedChange = { isChecked ->
+                            viewModel.toggleUtilityWidget(isChecked)
+                            viewModel.toggleClock(isChecked)
+                            viewModel.toggleLunar(isChecked)
+                        },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007AFF))
+                    )
+                }
+
+                HorizontalDivider(color = Color(0xFF383838), modifier = Modifier.padding(vertical = 8.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,

@@ -160,13 +160,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val isMarketPricesRefreshing: StateFlow<Boolean> = _isMarketPricesRefreshing.asStateFlow()
 
     // Preferences states
-    private val _showClock = MutableStateFlow(true)
+    private val _showUtilityWidget = MutableStateFlow(prefs.showUtilityWidget)
+    val showUtilityWidget: StateFlow<Boolean> = _showUtilityWidget.asStateFlow()
+
+    private val _showClock = MutableStateFlow(prefs.showClock)
     val showClock: StateFlow<Boolean> = _showClock.asStateFlow()
 
-    private val _showLunar = MutableStateFlow(true)
+    private val _showLunar = MutableStateFlow(prefs.showLunar)
     val showLunar: StateFlow<Boolean> = _showLunar.asStateFlow()
 
-    private val _showMarketPrices = MutableStateFlow(true)
+    private val _showMarketPrices = MutableStateFlow(prefs.showMarketPrices)
     val showMarketPrices: StateFlow<Boolean> = _showMarketPrices.asStateFlow()
 
     private val _is24Hour = MutableStateFlow(prefs.is24HourFormat)
@@ -928,6 +931,19 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    fun toggleUtilityWidget(show: Boolean) {
+        _showUtilityWidget.value = show
+        prefs.showUtilityWidget = show
+    }
+
+    fun hideUtilityWidget() {
+        toggleUtilityWidget(false)
+    }
+
+    fun hideMarketPricesWidget() {
+        toggleMarketPrices(false)
     }
 
     fun toggleClock(show: Boolean) {

@@ -26,6 +26,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.TrendingUp
@@ -235,6 +236,20 @@ fun DesktopMarketBannerCard(
                                 .clickable {
                                     viewModel.triggerVibration()
                                     viewModel.fetchMarketPrices()
+                                }
+                        )
+
+                        // Subtle close button to turn off / hide widget
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Ẩn widget giá thị trường",
+                            tint = Color.White.copy(alpha = 0.55f),
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    viewModel.triggerVibration()
+                                    viewModel.hideMarketPricesWidget()
                                 }
                         )
                     }

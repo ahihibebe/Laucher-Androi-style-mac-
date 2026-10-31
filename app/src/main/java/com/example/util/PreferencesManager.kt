@@ -8,6 +8,7 @@ class PreferencesManager(context: Context) {
         context.getSharedPreferences("macos_launcher_prefs", Context.MODE_PRIVATE)
 
     companion object {
+        private const val KEY_SHOW_UTILITY_WIDGET = "show_utility_widget"
         private const val KEY_SHOW_CLOCK = "show_clock"
         private const val KEY_SHOW_LUNAR = "show_lunar"
         private const val KEY_SHOW_MARKET_PRICES = "show_market_prices"
@@ -47,6 +48,10 @@ class PreferencesManager(context: Context) {
     var bankQrFitMode: String
         get() = prefs.getString(KEY_BANK_QR_FIT_MODE, "fit") ?: "fit"
         set(value) = prefs.edit().putString(KEY_BANK_QR_FIT_MODE, value).apply()
+
+    var showUtilityWidget: Boolean
+        get() = prefs.getBoolean(KEY_SHOW_UTILITY_WIDGET, true)
+        set(value) = prefs.edit().putBoolean(KEY_SHOW_UTILITY_WIDGET, value).apply()
 
     var showClock: Boolean
         get() = prefs.getBoolean(KEY_SHOW_CLOCK, true)
