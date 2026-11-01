@@ -290,10 +290,11 @@ fun DesktopUtilityBannerCard(
                                         Text(
                                             text = formattedTime,
                                             color = Color.White,
-                                            fontSize = 27.sp,
+                                            fontSize = 28.sp,
                                             fontWeight = FontWeight.Bold,
-                                            lineHeight = 28.sp
+                                            lineHeight = 29.sp
                                         )
+                                        Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = formattedDate,
                                             color = Color.White.copy(alpha = 0.85f),
@@ -304,69 +305,64 @@ fun DesktopUtilityBannerCard(
                                         )
                                     }
 
-                                    // Right Column: Optimized 3D Frosted Glass Subcard for Lunar Date & Can Chi
-                                    Surface(
-                                        shape = RoundedCornerShape(15.dp),
-                                        color = Color.White.copy(alpha = 0.14f),
-                                        border = BorderStroke(
-                                            width = 1.dp,
-                                            brush = Brush.verticalGradient(
-                                                listOf(
-                                                    Color.White.copy(alpha = 0.55f),
-                                                    Color.White.copy(alpha = 0.15f)
-                                                )
+                                    // Dấu gạch đứng ngăn cách giờ và ngày âm lịch
+                                    Box(
+                                        modifier = Modifier
+                                            .width(1.5.dp)
+                                            .height(48.dp)
+                                            .background(
+                                                Color.White.copy(alpha = 0.45f),
+                                                shape = RoundedCornerShape(1.dp)
                                             )
-                                        ),
-                                        shadowElevation = 0.dp,
+                                    )
+
+                                    // Right Column: Lunar Date & Can Chi (không có viền bo)
+                                    Column(
                                         modifier = Modifier
                                             .weight(1.35f)
-                                            .fillMaxHeight()
-                                            .clickable { viewModel.openFullCalendarDialog() }
+                                            .fillMaxHeight(),
+                                        verticalArrangement = Arrangement.Center
                                     ) {
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .padding(horizontal = 9.dp, vertical = 6.dp),
-                                            verticalArrangement = Arrangement.SpaceBetween
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Text(
-                                                    text = "Âm lịch: Ngày ${lunarDate.day}/${lunarDate.month}${if (lunarDate.isLeap) " (Nhuận)" else ""}",
-                                                    color = Color(0xFFFDE047),
-                                                    fontSize = 12.5.sp,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                                Text(
-                                                    text = "Xem lịch ↗",
-                                                    color = Color(0xFF93C5FD),
-                                                    fontSize = 9.sp,
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
-                                            }
-
-                                            if (showCanChi) {
-                                                Text(
-                                                    text = "Năm ${lunarDate.canChiYear} • Giờ ${lunarDate.canChiDay}",
-                                                    color = Color.White.copy(alpha = 0.85f),
-                                                    fontSize = 9.5.sp,
-                                                    fontWeight = FontWeight.Medium,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-
                                             Text(
-                                                text = "Tiết khí: ${com.example.util.LunarCalendarHelper.getTietKhi(lunarDate.solarMonth, lunarDate.solarDay)}",
-                                                color = Color.White.copy(alpha = 0.65f),
-                                                fontSize = 8.5.sp,
+                                                text = "Âm lịch: Ngày ${lunarDate.day}/${lunarDate.month}${if (lunarDate.isLeap) " (Nhuận)" else ""}",
+                                                color = Color(0xFFFDE047),
+                                                fontSize = 12.5.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "Xem lịch ↗",
+                                                color = Color(0xFF93C5FD),
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.height(3.dp))
+
+                                        if (showCanChi) {
+                                            Text(
+                                                text = "Năm ${lunarDate.canChiYear} • Giờ ${lunarDate.canChiDay}",
+                                                color = Color.White.copy(alpha = 0.85f),
+                                                fontSize = 9.5.sp,
+                                                fontWeight = FontWeight.Medium,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
+                                            Spacer(modifier = Modifier.height(2.dp))
                                         }
+
+                                        Text(
+                                            text = "Tiết khí: ${com.example.util.LunarCalendarHelper.getTietKhi(lunarDate.solarMonth, lunarDate.solarDay)}",
+                                            color = Color.White.copy(alpha = 0.65f),
+                                            fontSize = 8.5.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
                                     }
                                 }
                             } else if (showClock) {
@@ -392,64 +388,47 @@ fun DesktopUtilityBannerCard(
                                     )
                                 }
                             } else {
-                                // Only Lunar Calendar visible
-                                Surface(
-                                    shape = RoundedCornerShape(15.dp),
-                                    color = Color.White.copy(alpha = 0.14f),
-                                    border = BorderStroke(
-                                        width = 1.dp,
-                                        brush = Brush.verticalGradient(
-                                            listOf(
-                                                Color.White.copy(alpha = 0.55f),
-                                                Color.White.copy(alpha = 0.15f)
-                                            )
-                                        )
-                                    ),
-                                    shadowElevation = 0.dp,
+                                // Only Lunar Calendar visible (không có viền bo)
+                                Column(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .clickable { viewModel.openFullCalendarDialog() }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalArrangement = Arrangement.SpaceAround
                                 ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(horizontal = 14.dp, vertical = 8.dp),
-                                        verticalArrangement = Arrangement.SpaceAround
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = "Âm lịch: Ngày ${lunarDate.day}/${lunarDate.month}${if (lunarDate.isLeap) " (Nhuận)" else ""}",
-                                                color = Color(0xFFFDE047),
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            Text(
-                                                text = "Xem lịch đầy đủ ↗",
-                                                color = Color(0xFF93C5FD),
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
-                                        }
-
-                                        if (showCanChi) {
-                                            Text(
-                                                text = "Năm ${lunarDate.canChiYear} • Giờ ${lunarDate.canChiDay}",
-                                                color = Color.White.copy(alpha = 0.85f),
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                        }
-
                                         Text(
-                                            text = "Tiết khí: ${com.example.util.LunarCalendarHelper.getTietKhi(lunarDate.solarMonth, lunarDate.solarDay)}",
-                                            color = Color.White.copy(alpha = 0.70f),
-                                            fontSize = 9.5.sp
+                                            text = "Âm lịch: Ngày ${lunarDate.day}/${lunarDate.month}${if (lunarDate.isLeap) " (Nhuận)" else ""}",
+                                            color = Color(0xFFFDE047),
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "Xem lịch đầy đủ ↗",
+                                            color = Color(0xFF93C5FD),
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                     }
+
+                                    if (showCanChi) {
+                                        Text(
+                                            text = "Năm ${lunarDate.canChiYear} • Giờ ${lunarDate.canChiDay}",
+                                            color = Color.White.copy(alpha = 0.85f),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+
+                                    Text(
+                                        text = "Tiết khí: ${com.example.util.LunarCalendarHelper.getTietKhi(lunarDate.solarMonth, lunarDate.solarDay)}",
+                                        color = Color.White.copy(alpha = 0.70f),
+                                        fontSize = 9.5.sp
+                                    )
                                 }
                             }
                         }
