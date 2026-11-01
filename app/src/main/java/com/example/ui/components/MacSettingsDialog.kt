@@ -49,6 +49,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -834,10 +836,83 @@ private fun WallpaperSettingsPane(
     onPickImage: () -> Unit
 ) {
     val presets = WallpaperPresets.presets
+    val wallpaperAlpha by viewModel.wallpaperAlpha.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
         Text("Hình nền Desktop", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
         Text("Chọn hình nền macOS hoặc chọn ảnh từ máy", color = Color.Gray, fontSize = 11.sp)
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Card tùy chỉnh độ trong suốt / mờ ảnh nền
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = Color(0xFF282828),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Độ trong suốt ảnh nền", color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Giảm độ sáng để widget và icon nổi bật hơn", color = Color.Gray, fontSize = 10.sp)
+                    }
+                    Text(
+                        text = "${(wallpaperAlpha * 100).toInt()}%",
+                        color = Color(0xFF60A5FA),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Slider(
+                    value = wallpaperAlpha,
+                    onValueChange = { viewModel.setWallpaperAlpha(it) },
+                    valueRange = 0.15f..1.0f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color(0xFF60A5FA),
+                        activeTrackColor = Color(0xFF3B82F6),
+                        inactiveTrackColor = Color(0xFF4B5563)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(
+                        "40% Mờ" to 0.40f,
+                        "65% Dịu" to 0.65f,
+                        "85% Vừa" to 0.85f,
+                        "100% Rõ" to 1.0f
+                    ).forEach { (label, value) ->
+                        val isCurrent = kotlin.math.abs(wallpaperAlpha - value) < 0.06f
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (isCurrent) Color(0xFF3B82F6) else Color.White.copy(alpha = 0.08f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { viewModel.setWallpaperAlpha(value) }
+                        ) {
+                            Text(
+                                text = label,
+                                color = if (isCurrent) Color.White else Color.LightGray,
+                                fontSize = 9.5.sp,
+                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(10.dp))
 
@@ -850,6 +925,19 @@ private fun WallpaperSettingsPane(
             Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text("Chọn ảnh trên máy làm hình nền", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
+
+        if (customWallpaperUri != null) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Button(
+                onClick = { viewModel.setWallpaper(currentWallpaper) },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF374151)),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                Text("Dùng lại hình nền mặc định macOS", color = Color(0xFFE5E7EB), fontSize = 11.sp)
+            }
         }
 
         Spacer(modifier = Modifier.height(10.dp))

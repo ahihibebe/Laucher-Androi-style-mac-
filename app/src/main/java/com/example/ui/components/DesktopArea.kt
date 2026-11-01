@@ -52,11 +52,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -308,34 +311,20 @@ fun DesktopArea(
                 Spacer(modifier = Modifier.weight(1f))
             }
 
-            // Thanh hướng dẫn thao tác kích thước nhỏ gọn hơn, hiển thị cách thanh dock một khoảng
+            // Thanh hướng dẫn thao tác (trong suốt không màu nền, hiển thị cách thanh dock một khoảng)
             if (showLaunchpadGuide) {
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Surface(
-                    shape = RoundedCornerShape(18.dp),
-                    color = Color.White.copy(alpha = 0.20f),
-                    shadowElevation = 6.dp,
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
                         .clickable { onNavigateToLaunchpad() }
-                        .border(
-                            1.dp,
-                            Brush.verticalGradient(
-                                listOf(
-                                    Color.White.copy(alpha = 0.85f),
-                                    Color.White.copy(alpha = 0.20f),
-                                    Color.White.copy(alpha = 0.50f)
-                                )
-                            ),
-                            RoundedCornerShape(18.dp)
-                        )
+                        .padding(horizontal = 6.dp, vertical = 6.dp)
                         .testTag("launchpad_swipe_guide_button")
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -368,12 +357,26 @@ fun DesktopArea(
                                     text = "Tất cả ứng dụng (Launchpad)",
                                     color = Color.White,
                                     fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    fontWeight = FontWeight.SemiBold,
+                                    style = TextStyle(
+                                        shadow = Shadow(
+                                            color = Color.Black.copy(alpha = 0.7f),
+                                            offset = Offset(0f, 1f),
+                                            blurRadius = 4f
+                                        )
+                                    )
                                 )
                                 Text(
                                     text = "Vuốt sang phải / vuốt lên / chạm để mở",
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    fontSize = 9.sp
+                                    color = Color.White.copy(alpha = 0.85f),
+                                    fontSize = 9.sp,
+                                    style = TextStyle(
+                                        shadow = Shadow(
+                                            color = Color.Black.copy(alpha = 0.7f),
+                                            offset = Offset(0f, 1f),
+                                            blurRadius = 4f
+                                        )
+                                    )
                                 )
                             }
                         }
@@ -381,7 +384,7 @@ fun DesktopArea(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.8f),
+                            tint = Color.White.copy(alpha = 0.85f),
                             modifier = Modifier.size(14.dp)
                         )
                     }

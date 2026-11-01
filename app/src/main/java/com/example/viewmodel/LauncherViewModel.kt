@@ -184,6 +184,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _customWallpaperUri = MutableStateFlow(prefs.customWallpaperUri)
     val customWallpaperUri: StateFlow<String?> = _customWallpaperUri.asStateFlow()
 
+    private val _wallpaperAlpha = MutableStateFlow(prefs.wallpaperAlpha)
+    val wallpaperAlpha: StateFlow<Float> = _wallpaperAlpha.asStateFlow()
+
     // Gesture preferences
     private val _swipeRightForLaunchpad = MutableStateFlow(prefs.swipeRightForLaunchpad)
     val swipeRightForLaunchpad: StateFlow<Boolean> = _swipeRightForLaunchpad.asStateFlow()
@@ -996,6 +999,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         prefs.customWallpaperUri = null
         _currentWallpaper.value = wallpaper
         prefs.wallpaperId = wallpaper.id
+    }
+
+    fun setWallpaperAlpha(alpha: Float) {
+        val clamped = alpha.coerceIn(0.1f, 1.0f)
+        _wallpaperAlpha.value = clamped
+        prefs.wallpaperAlpha = clamped
     }
 
     fun setCustomWallpaperUri(uriString: String?) {

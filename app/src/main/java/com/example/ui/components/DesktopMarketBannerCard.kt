@@ -8,6 +8,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -63,60 +64,57 @@ fun DesktopMarketBannerCard(
     val pagerScope = rememberCoroutineScope()
     val isMarketRefreshing by viewModel.isMarketPricesRefreshing.collectAsState()
 
-    // Outer Liquid Glass Container - Surface paints background & border seamlessly edge-to-edge
-    Surface(
-        shape = RoundedCornerShape(26.dp),
-        color = Color.White.copy(alpha = 0.18f),
-        border = BorderStroke(
-            width = 1.2.dp,
-            brush = Brush.verticalGradient(
-                listOf(
-                    Color.White.copy(alpha = 0.90f),
-                    Color.White.copy(alpha = 0.25f),
-                    Color.White.copy(alpha = 0.65f)
-                )
-            )
-        ),
-        shadowElevation = 14.dp,
+    val widgetShape = RoundedCornerShape(26.dp)
+
+    // Outer Liquid Glass Container - strictly clipped to 26.dp so background fills 100% full-bleed
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(132.dp)
+            .height(130.dp)
+            .clip(widgetShape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.40f),
+                        Color.White.copy(alpha = 0.22f),
+                        Color.White.copy(alpha = 0.32f)
+                    )
+                )
+            )
+            .border(
+                width = 1.2.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.90f),
+                        Color.White.copy(alpha = 0.35f),
+                        Color.White.copy(alpha = 0.70f)
+                    )
+                ),
+                shape = widgetShape
+            )
             .testTag("desktop_market_banner_widget")
     ) {
+        // Top Specular Gloss Highlight (3D Liquid Glass Dome Shine)
         Box(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .height(48.dp)
+                .align(Alignment.TopCenter)
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color.White.copy(alpha = 0.22f),
+                            Color.White.copy(alpha = 0.35f),
                             Color.White.copy(alpha = 0.08f),
-                            Color.Black.copy(alpha = 0.30f)
+                            Color.Transparent
                         )
                     )
                 )
-        ) {
-            // Top Specular Gloss Highlight (3D Liquid Glass Dome Shine)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .align(Alignment.TopCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.38f),
-                                Color.White.copy(alpha = 0.08f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
+        )
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 12.dp, vertical = 9.dp),
+                    .padding(horizontal = 11.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 // Header Bar: Icon + Page Title + 3 Page Switcher Dots + Refresh Icon
@@ -285,7 +283,7 @@ fun DesktopMarketBannerCard(
                                             )
                                         )
                                     ),
-                                    shadowElevation = 3.dp,
+                                    shadowElevation = 0.dp,
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight()
@@ -350,7 +348,7 @@ fun DesktopMarketBannerCard(
                                             )
                                         )
                                     ),
-                                    shadowElevation = 3.dp,
+                                    shadowElevation = 0.dp,
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight()
@@ -416,7 +414,7 @@ fun DesktopMarketBannerCard(
                                             )
                                         )
                                     ),
-                                    shadowElevation = 3.dp,
+                                    shadowElevation = 0.dp,
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight()
@@ -512,7 +510,7 @@ fun DesktopMarketBannerCard(
                                                 )
                                             )
                                         ),
-                                        shadowElevation = 3.dp,
+                                        shadowElevation = 0.dp,
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxHeight()
@@ -576,7 +574,7 @@ fun DesktopMarketBannerCard(
                                                 )
                                             )
                                         ),
-                                        shadowElevation = 3.dp,
+                                        shadowElevation = 0.dp,
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxHeight()
@@ -617,4 +615,3 @@ fun DesktopMarketBannerCard(
             }
         }
     }
-}

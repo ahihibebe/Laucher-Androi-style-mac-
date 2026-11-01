@@ -33,6 +33,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.draw.alpha
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -88,6 +89,7 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
     val showCanChi by viewModel.showCanChi.collectAsState()
     val currentWallpaper by viewModel.currentWallpaper.collectAsState()
     val customWallpaperUri by viewModel.customWallpaperUri.collectAsState()
+    val wallpaperAlpha by viewModel.wallpaperAlpha.collectAsState()
     val dockApps by viewModel.dockApps.collectAsState()
     val installedApps by viewModel.installedApps.collectAsState()
     val filteredApps by viewModel.filteredApps.collectAsState()
@@ -164,8 +166,8 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Wallpaper: Custom device photo or macOS preset
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0F12))) {
+        // Wallpaper: Custom device photo or macOS preset with customizable opacity
         if (customWallpaperUri != null) {
             val context = LocalContext.current
             val wallpaperModel = remember(customWallpaperUri) {
@@ -180,12 +182,14 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
                 painter = rememberAsyncImagePainter(model = wallpaperModel),
                 contentDescription = "Hình nền thiết bị",
                 contentScale = ContentScale.Crop,
+                alpha = wallpaperAlpha,
                 modifier = Modifier.fillMaxSize()
             )
         } else {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .alpha(wallpaperAlpha)
                     .background(currentWallpaper.backgroundBrush)
             )
         }

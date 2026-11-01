@@ -15,6 +15,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_24_HOUR = "is_24_hour"
         private const val KEY_SHOW_CAN_CHI = "show_can_chi"
         private const val KEY_WALLPAPER = "wallpaper_id"
+        private const val KEY_WALLPAPER_ALPHA = "wallpaper_alpha"
         private const val KEY_CUSTOM_WALLPAPER_URI = "custom_wallpaper_uri"
         private const val KEY_HIDDEN_PACKAGES = "hidden_packages"
         private const val KEY_DOCK_APP_0 = "dock_app_0"
@@ -76,6 +77,10 @@ class PreferencesManager(context: Context) {
     var wallpaperId: String
         get() = prefs.getString(KEY_WALLPAPER, "sequoia") ?: "sequoia"
         set(value) = prefs.edit().putString(KEY_WALLPAPER, value).apply()
+
+    var wallpaperAlpha: Float
+        get() = prefs.getFloat(KEY_WALLPAPER_ALPHA, 1.0f)
+        set(value) = prefs.edit().putFloat(KEY_WALLPAPER_ALPHA, value).apply()
 
     var customWallpaperUri: String?
         get() = prefs.getString(KEY_CUSTOM_WALLPAPER_URI, null)
