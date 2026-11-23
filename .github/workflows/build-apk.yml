@@ -92,8 +92,10 @@ jobs:
           KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
           STORE_PASSWORD: ${{ steps.keystore.outputs.has_secret == 'true' && secrets.STORE_PASSWORD || 'android' }}
           KEY_PASSWORD: ${{ steps.keystore.outputs.has_secret == 'true' && secrets.KEY_PASSWORD || 'android' }}
+          JAVA_TOOL_OPTIONS: -Djava.awt.headless=true
         run: |
-          gradle :app:assembleDebug :app:assembleRelease --stacktrace
+          gradle :app:assembleDebug --stacktrace
+          gradle :app:assembleRelease --stacktrace
 
       - name: Prepare Versioned APK Outputs
         id: version
