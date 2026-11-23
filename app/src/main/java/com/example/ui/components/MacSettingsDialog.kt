@@ -43,6 +43,11 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.foundation.layout.PaddingValues
+import android.widget.Toast
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Opacity
+import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -58,7 +63,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,10 +73,14 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -192,6 +203,7 @@ fun MacSettingsDialog(
                             .width(125.dp)
                             .fillMaxHeight()
                             .background(Color(0xFF252525))
+                            .verticalScroll(rememberScrollState())
                             .padding(vertical = 10.dp, horizontal = 6.dp)
                     ) {
                         SettingsSidebarItem(
@@ -220,7 +232,7 @@ fun MacSettingsDialog(
                         )
                         SettingsSidebarItem(
                             icon = Icons.Default.Wallpaper,
-                            label = "Hình nền",
+                            label = "Hình nền & Widget",
                             isSelected = selectedCategory == SettingsCategory.WALLPAPER,
                             onClick = { viewModel.selectSettingsCategory(SettingsCategory.WALLPAPER) }
                         )
@@ -235,6 +247,12 @@ fun MacSettingsDialog(
                             label = "Cài đặt chung",
                             isSelected = selectedCategory == SettingsCategory.GENERAL,
                             onClick = { viewModel.selectSettingsCategory(SettingsCategory.GENERAL) }
+                        )
+                        SettingsSidebarItem(
+                            icon = Icons.Default.QrCode2,
+                            label = "Thông tin QR",
+                            isSelected = selectedCategory == SettingsCategory.DONATE,
+                            onClick = { viewModel.selectSettingsCategory(SettingsCategory.DONATE) }
                         )
                         SettingsSidebarItem(
                             icon = Icons.Default.Info,
@@ -300,6 +318,9 @@ fun MacSettingsDialog(
                                 GeneralSettingsPane(
                                     viewModel = viewModel
                                 )
+                            }
+                            SettingsCategory.DONATE -> {
+                                DonateQrSettingsPane()
                             }
                             SettingsCategory.ABOUT -> {
                                 AboutSettingsPane()
@@ -837,147 +858,230 @@ private fun WallpaperSettingsPane(
 ) {
     val presets = WallpaperPresets.presets
     val wallpaperAlpha by viewModel.wallpaperAlpha.collectAsState()
+    val widgetAlpha by viewModel.widgetAlpha.collectAsState()
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Text("Hình nền Desktop", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-        Text("Chọn hình nền macOS hoặc chọn ảnh từ máy", color = Color.Gray, fontSize = 11.sp)
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        item {
+            Column {
+                Text("Hình nền & Độ trong suốt Widget", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Tùy chỉnh ảnh nền, độ trong suốt ảnh nền và các widget", color = Color.Gray, fontSize = 11.sp)
+            }
+        }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Card tùy chỉnh độ trong suốt / mờ ảnh nền
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = Color(0xFF282828),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Độ trong suốt ảnh nền", color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Giảm độ sáng để widget và icon nổi bật hơn", color = Color.Gray, fontSize = 10.sp)
+        // Card 1: Độ trong suốt ảnh nền
+        item {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFF282828),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Độ trong suốt ảnh nền", color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Điều chỉnh độ sáng/rõ của ảnh nền Desktop", color = Color.Gray, fontSize = 10.sp)
+                        }
+                        Text(
+                            text = "${(wallpaperAlpha * 100).toInt()}%",
+                            color = Color(0xFF60A5FA),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                    Text(
-                        text = "${(wallpaperAlpha * 100).toInt()}%",
-                        color = Color(0xFF60A5FA),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Slider(
+                        value = wallpaperAlpha,
+                        onValueChange = { viewModel.setWallpaperAlpha(it) },
+                        valueRange = 0.0f..1.0f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color(0xFF60A5FA),
+                            activeTrackColor = Color(0xFF3B82F6),
+                            inactiveTrackColor = Color(0xFF4B5563)
+                        ),
+                        modifier = Modifier.fillMaxWidth().testTag("settings_wallpaper_alpha_slider")
                     )
-                }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Slider(
-                    value = wallpaperAlpha,
-                    onValueChange = { viewModel.setWallpaperAlpha(it) },
-                    valueRange = 0.15f..1.0f,
-                    colors = SliderDefaults.colors(
-                        thumbColor = Color(0xFF60A5FA),
-                        activeTrackColor = Color(0xFF3B82F6),
-                        inactiveTrackColor = Color(0xFF4B5563)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    listOf(
-                        "40% Mờ" to 0.40f,
-                        "65% Dịu" to 0.65f,
-                        "85% Vừa" to 0.85f,
-                        "100% Rõ" to 1.0f
-                    ).forEach { (label, value) ->
-                        val isCurrent = kotlin.math.abs(wallpaperAlpha - value) < 0.06f
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = if (isCurrent) Color(0xFF3B82F6) else Color.White.copy(alpha = 0.08f),
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { viewModel.setWallpaperAlpha(value) }
-                        ) {
-                            Text(
-                                text = label,
-                                color = if (isCurrent) Color.White else Color.LightGray,
-                                fontSize = 9.5.sp,
-                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(
+                            "0% Đen" to 0.0f,
+                            "40% Mờ" to 0.40f,
+                            "70% Dịu" to 0.70f,
+                            "100% Rõ" to 1.0f
+                        ).forEach { (label, value) ->
+                            val isCurrent = kotlin.math.abs(wallpaperAlpha - value) < 0.06f
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (isCurrent) Color(0xFF3B82F6) else Color.White.copy(alpha = 0.08f),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { viewModel.setWallpaperAlpha(value) }
+                            ) {
+                                Text(
+                                    text = label,
+                                    color = if (isCurrent) Color.White else Color.LightGray,
+                                    fontSize = 9.sp,
+                                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                            }
                         }
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Button(
-            onClick = onPickImage,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF472B6)),
-            shape = RoundedCornerShape(10.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Chọn ảnh trên máy làm hình nền", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        }
-
-        if (customWallpaperUri != null) {
-            Spacer(modifier = Modifier.height(6.dp))
-            Button(
-                onClick = { viewModel.setWallpaper(currentWallpaper) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF374151)),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(vertical = 4.dp)
+        // Card 2: Độ trong suốt các Widget
+        item {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFF282828),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Dùng lại hình nền mặc định macOS", color = Color(0xFFE5E7EB), fontSize = 11.sp)
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(Icons.Default.Opacity, contentDescription = null, tint = Color(0xFFF472B6), modifier = Modifier.size(16.dp))
+                            Column {
+                                Text("Độ trong suốt các Widget", color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Áp dụng cho Widget Đồng hồ/QR/Nhạc & Giá thị trường", color = Color.Gray, fontSize = 10.sp)
+                            }
+                        }
+                        Text(
+                            text = "${(widgetAlpha * 100).toInt()}%",
+                            color = Color(0xFFF472B6),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Slider(
+                        value = widgetAlpha,
+                        onValueChange = { viewModel.setWidgetAlpha(it) },
+                        valueRange = 0.0f..1.0f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color(0xFFF472B6),
+                            activeTrackColor = Color(0xFFEC4899),
+                            inactiveTrackColor = Color(0xFF4B5563)
+                        ),
+                        modifier = Modifier.fillMaxWidth().testTag("settings_widget_alpha_slider")
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(
+                            "0% Kính" to 0.0f,
+                            "40% Mờ" to 0.40f,
+                            "75% Đậm" to 0.75f,
+                            "100% Tối" to 1.0f
+                        ).forEach { (label, value) ->
+                            val isCurrent = kotlin.math.abs(widgetAlpha - value) < 0.06f
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (isCurrent) Color(0xFFEC4899) else Color.White.copy(alpha = 0.08f),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { viewModel.setWidgetAlpha(value) }
+                            ) {
+                                Text(
+                                    text = label,
+                                    color = if (isCurrent) Color.White else Color.LightGray,
+                                    fontSize = 9.sp,
+                                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(presets) { wp ->
-                val isSelected = wp.id == currentWallpaper.id && customWallpaperUri == null
-                Surface(
+        // Chọn ảnh từ máy / quay về mặc định
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Button(
+                    onClick = onPickImage,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF472B6)),
                     shape = RoundedCornerShape(10.dp),
-                    color = Color(0xFF282828),
-                    border = if (isSelected) androidx.compose.foundation.BorderStroke(2.dp, Color(0xFF007AFF)) else null,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Chọn ảnh trên máy làm hình nền", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+
+                if (customWallpaperUri != null) {
+                    Button(
+                        onClick = { viewModel.setWallpaper(currentWallpaper) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF374151)),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(vertical = 4.dp)
+                    ) {
+                        Text("Dùng lại hình nền mặc định macOS", color = Color(0xFFE5E7EB), fontSize = 11.sp)
+                    }
+                }
+            }
+        }
+
+        // Preset macOS Wallpapers
+        items(presets) { wp ->
+            val isSelected = wp.id == currentWallpaper.id && customWallpaperUri == null
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFF282828),
+                border = if (isSelected) androidx.compose.foundation.BorderStroke(2.dp, Color(0xFF007AFF)) else null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { viewModel.setWallpaper(wp) }
+            ) {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { viewModel.setWallpaper(wp) }
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Row(
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(wp.backgroundBrush)
-                        )
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(wp.backgroundBrush)
+                    )
 
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(wp.name, color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
-                            Text(wp.description, color = Color.Gray, fontSize = 10.sp, maxLines = 1)
-                        }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(wp.name, color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
+                        Text(wp.description, color = Color.Gray, fontSize = 10.sp, maxLines = 1)
+                    }
 
-                        if (isSelected) {
-                            Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF007AFF), modifier = Modifier.size(16.dp))
-                        }
+                    if (isSelected) {
+                        Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF007AFF), modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -1037,23 +1141,137 @@ private fun GeneralSettingsPane(viewModel: LauncherViewModel) {
 }
 
 @Composable
-private fun AboutSettingsPane() {
+private fun DonateQrSettingsPane() {
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+    var isQrZoomed by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Thông tin & Mã QR ủng hộ", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "Nếu hợp gu gửi mình gói bim bim ăn cho vui miệng 😋",
+            color = Color(0xFFFDE047),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White,
+            shadowElevation = 8.dp,
+            modifier = Modifier
+                .size(170.dp)
+                .clickable { isQrZoomed = true }
+                .testTag("settings_donate_qr_image")
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.dev_donate_qr),
+                contentDescription = "Mã QR MB Bank 220011026789",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.clickable { isQrZoomed = true }
+        ) {
+            Icon(Icons.Default.ZoomIn, contentDescription = null, tint = Color(0xFF93C5FD), modifier = Modifier.size(14.dp))
+            Text("Chạm vào mã QR để phóng to", color = Color(0xFF93C5FD), fontSize = 10.5.sp)
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = Color(0xFF282828),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3B82F6).copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SpecRow("Ngân hàng:", "MB Bank")
+                SpecRow("Số tài khoản:", "220011026789")
+                SpecRow("Chủ ứng dụng:", "Dev Trường Thanh")
+
+                Button(
+                    onClick = {
+                        clipboardManager.setText(AnnotatedString("220011026789"))
+                        Toast.makeText(context, "Đã sao chép STK: 220011026789 (MB Bank)", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF)),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth().testTag("settings_copy_stk_button")
+                ) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Sao chép STK 220011026789", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+
+    if (isQrZoomed) {
+        Dialog(onDismissRequest = { isQrZoomed = false }) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = Color.White,
+                modifier = Modifier
+                    .size(300.dp)
+                    .clickable { isQrZoomed = false }
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.dev_donate_qr),
+                    contentDescription = "Mã QR MB Bank phóng to",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(12.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AboutSettingsPane() {
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(10.dp))
 
         Image(
-            painter = painterResource(id = R.drawable.ic_pink_apple),
+            painter = painterResource(id = R.drawable.ic_app_logo),
             contentDescription = "macOs",
-            modifier = Modifier.size(50.dp)
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(14.dp))
         )
 
+        Spacer(modifier = Modifier.height(6.dp))
+
         Text("Launcher Giao diện macOs", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        Text("Phiên bản 1.0 (Pink Apple)", color = Color(0xFFF472B6), fontSize = 11.5.sp)
+        Text("Phiên bản 1.0 (Dev Trường Thanh)", color = Color(0xFFF472B6), fontSize = 11.5.sp)
 
         Spacer(modifier = Modifier.height(14.dp))
 
@@ -1082,6 +1300,58 @@ private fun AboutSettingsPane() {
                 ) {
                     Text("Facebook:", color = Color.Gray, fontSize = 11.5.sp)
                     Text("fb.com/TruongAlone", color = Color(0xFF60A5FA), fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = Color(0xFF2A2438),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFBBF24).copy(alpha = 0.35f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Nếu hợp gu gửi mình gói bim bim ăn cho vui miệng 😋",
+                    color = Color(0xFFFDE047),
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color.White,
+                    modifier = Modifier.size(110.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.dev_donate_qr),
+                        contentDescription = "Mã QR MB Bank 220011026789",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize().padding(4.dp)
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("STK: 220011026789 • MB Bank", color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = "Sao chép",
+                        color = Color(0xFF60A5FA),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable {
+                            clipboardManager.setText(AnnotatedString("220011026789"))
+                            Toast.makeText(context, "Đã sao chép STK: 220011026789", Toast.LENGTH_SHORT).show()
+                        }
+                    )
                 }
             }
         }

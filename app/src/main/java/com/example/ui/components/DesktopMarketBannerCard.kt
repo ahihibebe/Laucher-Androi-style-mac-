@@ -224,27 +224,13 @@ fun DesktopMarketBannerCard(
                                 .graphicsLayer {
                                     if (isMarketRefreshing) rotationZ = spinAngle
                                 }
-                                .clickable {
-                                    viewModel.triggerVibration()
-                                    viewModel.fetchMarketPrices()
-                                }
-                        )
-
-                        // Subtle close button to turn off / hide widget
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Ẩn widget giá thị trường",
-                            tint = Color.White.copy(alpha = 0.55f),
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clip(CircleShape)
-                                .clickable {
-                                    viewModel.triggerVibration()
-                                    viewModel.hideMarketPricesWidget()
-                                }
-                        )
-                    }
+                            .clickable {
+                                viewModel.triggerVibration()
+                                viewModel.fetchMarketPrices()
+                            }
+                    )
                 }
+            }
 
                 // Horizontal Pager Content
                 HorizontalPager(

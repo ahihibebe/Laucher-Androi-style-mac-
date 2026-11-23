@@ -326,28 +326,14 @@ fun DesktopUtilityBannerCard(
                                                 }
                                             } else Color.White.copy(alpha = 0.35f)
                                         )
-                                        .clickable {
-                                            pagerScope.launch { leftPagerState.animateScrollToPage(idx) }
-                                        }
-                                )
-                            }
+                                    .clickable {
+                                        pagerScope.launch { leftPagerState.animateScrollToPage(idx) }
+                                    }
+                            )
                         }
-
-                        // Subtle close button to turn off / hide widget
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Ẩn widget tiện ích",
-                            tint = Color.White.copy(alpha = 0.55f),
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clip(CircleShape)
-                                .clickable {
-                                    viewModel.triggerVibration()
-                                    viewModel.hideUtilityWidget()
-                                }
-                        )
                     }
                 }
+            }
 
                 // Horizontal Pager Content
                 HorizontalPager(
