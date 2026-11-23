@@ -84,16 +84,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.R
 import com.example.model.AppInfo
+import com.example.model.ClockFontOption
+import com.example.model.ClockStyle
+import com.example.model.ClockWeightOption
 import com.example.model.LunarDate
 import com.example.model.MarketPriceReport
 import com.example.model.WallpaperPresets
 import com.example.model.WallpaperTheme
 import com.example.viewmodel.LauncherViewModel
 import com.example.viewmodel.SettingsCategory
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Composable
 fun MacSettingsDialog(
@@ -532,6 +538,14 @@ private fun ClockAndLunarSettingsPane(
     lunarDate: LunarDate
 ) {
     val scrollState = rememberScrollState()
+    val currentTime by viewModel.currentTime.collectAsState()
+    val clockStyle by viewModel.clockStyle.collectAsState()
+    val clockFont by viewModel.clockFont.collectAsState()
+    val clockWeight by viewModel.clockWeight.collectAsState()
+    val clockFontSize by viewModel.clockFontSize.collectAsState()
+    val formattedDate = remember(currentTime.timeInMillis) {
+        SimpleDateFormat("EEEE, d/M", Locale("vi", "VN")).format(currentTime.time)
+    }
 
     Column(
         modifier = Modifier
@@ -539,9 +553,261 @@ private fun ClockAndLunarSettingsPane(
             .verticalScroll(scrollState)
     ) {
         Text("Đồng hồ & Lịch âm", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-        Text("Tùy chỉnh bật tắt hiển thị thời gian và Âm lịch Việt Nam", color = Color.Gray, fontSize = 11.sp)
+        Text("Tùy chỉnh kiểu giờ, font chữ, chữ đậm, cỡ chữ và Âm lịch", color = Color.Gray, fontSize = 11.sp)
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Live Clock Preview Card
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = Color(0xFF141824),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3B82F6).copy(alpha = 0.45f)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("clock_live_preview_card")
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                Color(0xFF1E293B),
+                                Color(0xFF0F172A),
+                                Color(0xFF1E1B4B)
+                            )
+                        )
+                    )
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "XEM TRƯỚC ĐỒNG HỒ",
+                        color = Color(0xFF93C5FD),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    ClockDisplayView(
+                        currentTime = currentTime,
+                        formattedDate = formattedDate,
+                        is24Hour = is24Hour,
+                        clockStyle = clockStyle,
+                        clockFont = clockFont,
+                        clockWeight = clockWeight,
+                        clockFontSize = clockFontSize,
+                        centered = true
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Kiểu hiển thị giờ
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = Color(0xFF282828),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Kiểu hiển thị giờ", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth().testTag("clock_style_selector")
+                ) {
+                    items(ClockStyle.entries) { styleOption ->
+                        val isSelected = clockStyle == styleOption
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) Color(0xFF007AFF) else Color(0xFF353538),
+                            border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF93C5FD)) else null,
+                            modifier = Modifier
+                                .clickable { viewModel.setClockStyle(styleOption) }
+                                .testTag("clock_style_${styleOption.id}")
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = styleOption.displayName,
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                )
+                                Text(
+                                    text = styleOption.subtitle,
+                                    color = if (isSelected) Color(0xFFE0F2FE) else Color.Gray,
+                                    fontSize = 9.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = Color(0xFF383838))
+
+                // Font chữ đồng hồ
+                Text("Font chữ đồng hồ", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth().testTag("clock_font_selector")
+                ) {
+                    items(ClockFontOption.entries) { fontOption ->
+                        val isSelected = clockFont == fontOption
+                        val previewFamily = remember(fontOption) { fontOption.toFontFamily() }
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) Color(0xFF7C3AED) else Color(0xFF353538),
+                            border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFC4B5FD)) else null,
+                            modifier = Modifier
+                                .clickable { viewModel.setClockFont(fontOption) }
+                                .testTag("clock_font_${fontOption.id}")
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "12:30",
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = clockWeight.fontWeight,
+                                    fontFamily = previewFamily
+                                )
+                                Text(
+                                    text = fontOption.displayName,
+                                    color = if (isSelected) Color.White else Color.LightGray,
+                                    fontSize = 10.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                                Text(
+                                    text = fontOption.subtitle,
+                                    color = if (isSelected) Color(0xFFEDE9FE) else Color.Gray,
+                                    fontSize = 8.5.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = Color(0xFF383838))
+
+                // Chữ đậm (Weight)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Chữ đậm (Độ dày nét)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text("Chọn mức độ mảnh hoặc đậm của đồng hồ", color = Color.Gray, fontSize = 10.sp)
+                    }
+                    Switch(
+                        checked = clockWeight == ClockWeightOption.BOLD || clockWeight == ClockWeightOption.EXTRA_BOLD,
+                        onCheckedChange = { isBold ->
+                            viewModel.setClockWeight(if (isBold) ClockWeightOption.BOLD else ClockWeightOption.NORMAL)
+                        },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF10B981)),
+                        modifier = Modifier.testTag("clock_bold_switch")
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().testTag("clock_weight_selector"),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    ClockWeightOption.entries.forEach { weightOption ->
+                        val isSelected = clockWeight == weightOption
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) Color(0xFF10B981) else Color(0xFF353538),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { viewModel.setClockWeight(weightOption) }
+                                .testTag("clock_weight_${weightOption.id}")
+                        ) {
+                            Text(
+                                text = weightOption.displayName,
+                                color = Color.White,
+                                fontSize = 10.5.sp,
+                                fontWeight = weightOption.fontWeight,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(vertical = 6.dp)
+                            )
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = Color(0xFF383838))
+
+                // Cỡ chữ đồng hồ
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Cỡ chữ đồng hồ", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text("Kéo thanh trượt từ 20sp đến 44sp", color = Color.Gray, fontSize = 10.sp)
+                    }
+                    Text(
+                        text = "${clockFontSize.toInt()} sp",
+                        color = Color(0xFFFBBF24),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Slider(
+                    value = clockFontSize,
+                    onValueChange = { viewModel.setClockFontSize(it) },
+                    valueRange = 20f..44f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color(0xFFFBBF24),
+                        activeTrackColor = Color(0xFFF59E0B),
+                        inactiveTrackColor = Color(0xFF4B5563)
+                    ),
+                    modifier = Modifier.fillMaxWidth().testTag("clock_font_size_slider")
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(
+                        "Nhỏ (22)" to 22f,
+                        "Vừa (28)" to 28f,
+                        "Lớn (34)" to 34f,
+                        "Cực lớn (40)" to 40f
+                    ).forEach { (label, sizeVal) ->
+                        val isCurrent = kotlin.math.abs(clockFontSize - sizeVal) < 1.5f
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isCurrent) Color(0xFFF59E0B) else Color(0xFF353538),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { viewModel.setClockFontSize(sizeVal) }
+                        ) {
+                            Text(
+                                text = label,
+                                color = if (isCurrent) Color.Black else Color.LightGray,
+                                fontSize = 9.5.sp,
+                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(vertical = 5.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
 
         Surface(
             shape = RoundedCornerShape(12.dp),

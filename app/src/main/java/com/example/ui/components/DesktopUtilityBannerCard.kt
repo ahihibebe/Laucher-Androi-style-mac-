@@ -82,6 +82,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import com.example.model.ClockStyle
 import com.example.model.LunarDate
 import com.example.viewmodel.LauncherMusicTrack
 import com.example.viewmodel.LauncherViewModel
@@ -177,6 +178,20 @@ fun DesktopUtilityBannerCard(
     val context = LocalContext.current
     val pagerScope = rememberCoroutineScope()
     val widgetAlpha by viewModel.widgetAlpha.collectAsState()
+    val currentTime by viewModel.currentTime.collectAsState()
+    val is24Hour by viewModel.is24Hour.collectAsState()
+    val clockStyle by viewModel.clockStyle.collectAsState()
+    val clockFont by viewModel.clockFont.collectAsState()
+    val clockWeight by viewModel.clockWeight.collectAsState()
+    val clockFontSize by viewModel.clockFontSize.collectAsState()
+
+    val effectiveHeightBoost = when {
+        !showClock -> 0f
+        clockStyle == ClockStyle.STACKED -> ((clockFontSize - 20f).coerceAtLeast(0f) * 1.35f + 22f)
+        clockStyle == ClockStyle.ANALOG -> ((clockFontSize - 24f).coerceAtLeast(0f) * 0.9f + 6f)
+        else -> ((clockFontSize - 28f).coerceAtLeast(0f) * 1.15f)
+    }
+    val cardHeight = (130.dp + effectiveHeightBoost.dp).coerceIn(130.dp, 190.dp)
 
     val widgetShape = RoundedCornerShape(26.dp)
     val glassBrush = widgetGlassBrush(widgetAlpha)
@@ -188,7 +203,7 @@ fun DesktopUtilityBannerCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(130.dp)
+            .height(cardHeight)
             .clip(widgetShape)
             .background(glassBrush)
             .border(
@@ -353,28 +368,18 @@ fun DesktopUtilityBannerCard(
                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Left Column: Large Digital Clock & Solar Date
-                                    Column(
-                                        modifier = Modifier.weight(0.95f),
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Text(
-                                            text = formattedTime,
-                                            color = Color.White,
-                                            fontSize = 28.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            lineHeight = 29.sp
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = formattedDate,
-                                            color = Color.White.copy(alpha = 0.85f),
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
+                                    // Left Column: Customizable Clock & Solar Date
+                                    ClockDisplayView(
+                                        currentTime = currentTime,
+                                        formattedDate = formattedDate,
+                                        is24Hour = is24Hour,
+                                        clockStyle = clockStyle,
+                                        clockFont = clockFont,
+                                        clockWeight = clockWeight,
+                                        clockFontSize = clockFontSize,
+                                        centered = false,
+                                        modifier = Modifier.weight(1.05f)
+                                    )
 
                                     // Dấu gạch đứng ngăn cách giờ và ngày âm lịch
                                     Box(
@@ -390,7 +395,7 @@ fun DesktopUtilityBannerCard(
                                     // Right Column: Lunar Date & Can Chi (không có viền bo)
                                     Column(
                                         modifier = Modifier
-                                            .weight(1.35f)
+                                            .weight(1.25f)
                                             .fillMaxHeight(),
                                         verticalArrangement = Arrangement.Center
                                     ) {
@@ -438,24 +443,21 @@ fun DesktopUtilityBannerCard(
                                 }
                             } else if (showClock) {
                                 // Only Clock visible
-                                Column(
+                                Box(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .clickable { viewModel.openFullCalendarDialog() },
-                                    verticalArrangement = Arrangement.Center,
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = formattedTime,
-                                        color = Color.White,
-                                        fontSize = 32.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = formattedDate,
-                                        color = Color.White.copy(alpha = 0.85f),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium
+                                    ClockDisplayView(
+                                        currentTime = currentTime,
+                                        formattedDate = formattedDate,
+                                        is24Hour = is24Hour,
+                                        clockStyle = clockStyle,
+                                        clockFont = clockFont,
+                                        clockWeight = clockWeight,
+                                        clockFontSize = (clockFontSize + 4f).coerceAtMost(44f),
+                                        centered = true
                                     )
                                 }
                             } else {

@@ -33,6 +33,10 @@ class PreferencesManager(context: Context) {
         private const val KEY_BANK_QR_SCALE = "bank_qr_scale"
         private const val KEY_BANK_QR_FIT_MODE = "bank_qr_fit_mode"
         private const val KEY_DESKTOP_PINNED_APPS = "desktop_pinned_apps"
+        private const val KEY_CLOCK_STYLE = "clock_style"
+        private const val KEY_CLOCK_FONT = "clock_font"
+        private const val KEY_CLOCK_WEIGHT = "clock_weight"
+        private const val KEY_CLOCK_FONT_SIZE = "clock_font_size"
     }
 
     var bankQrUri: String?
@@ -74,6 +78,22 @@ class PreferencesManager(context: Context) {
     var showCanChi: Boolean
         get() = prefs.getBoolean(KEY_SHOW_CAN_CHI, true)
         set(value) = prefs.edit().putBoolean(KEY_SHOW_CAN_CHI, value).apply()
+
+    var clockStyle: String
+        get() = prefs.getString(KEY_CLOCK_STYLE, "classic") ?: "classic"
+        set(value) = prefs.edit().putString(KEY_CLOCK_STYLE, value).apply()
+
+    var clockFont: String
+        get() = prefs.getString(KEY_CLOCK_FONT, "default") ?: "default"
+        set(value) = prefs.edit().putString(KEY_CLOCK_FONT, value).apply()
+
+    var clockWeight: String
+        get() = prefs.getString(KEY_CLOCK_WEIGHT, "bold") ?: "bold"
+        set(value) = prefs.edit().putString(KEY_CLOCK_WEIGHT, value).apply()
+
+    var clockFontSize: Float
+        get() = prefs.getFloat(KEY_CLOCK_FONT_SIZE, 28f)
+        set(value) = prefs.edit().putFloat(KEY_CLOCK_FONT_SIZE, value).apply()
 
     var wallpaperId: String
         get() = prefs.getString(KEY_WALLPAPER, "sequoia") ?: "sequoia"

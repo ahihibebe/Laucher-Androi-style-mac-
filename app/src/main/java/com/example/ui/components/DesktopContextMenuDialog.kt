@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Gesture
 import androidx.compose.material.icons.filled.Opacity
 import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Wallpaper
@@ -239,6 +240,19 @@ fun DesktopContextMenuDialog(
                         onClick = {
                             onDismiss()
                             viewModel.openSettingsDialog(SettingsCategory.WALLPAPER)
+                        }
+                    )
+
+                    HorizontalDivider(color = Color(0xFF333333), modifier = Modifier.padding(vertical = 4.dp))
+
+                    ContextMenuActionRow(
+                        icon = Icons.Default.Schedule,
+                        iconTint = Color(0xFF34D399),
+                        title = "Kiểu giờ, Font, Chữ đậm & Cỡ",
+                        subtitle = "Tùy biến giao diện đồng hồ trên màn hình chính",
+                        onClick = {
+                            onDismiss()
+                            viewModel.openSettingsDialog(SettingsCategory.CLOCK_AND_LUNAR)
                         }
                     )
 

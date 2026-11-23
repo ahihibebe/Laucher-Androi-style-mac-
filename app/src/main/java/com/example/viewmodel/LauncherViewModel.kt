@@ -31,6 +31,9 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.model.AppInfo
+import com.example.model.ClockFontOption
+import com.example.model.ClockStyle
+import com.example.model.ClockWeightOption
 import com.example.model.LunarDate
 import com.example.model.MarketPriceReport
 import com.example.model.WallpaperPresets
@@ -178,6 +181,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private val _showCanChi = MutableStateFlow(prefs.showCanChi)
     val showCanChi: StateFlow<Boolean> = _showCanChi.asStateFlow()
+
+    private val _clockStyle = MutableStateFlow(ClockStyle.fromId(prefs.clockStyle))
+    val clockStyle: StateFlow<ClockStyle> = _clockStyle.asStateFlow()
+
+    private val _clockFont = MutableStateFlow(ClockFontOption.fromId(prefs.clockFont))
+    val clockFont: StateFlow<ClockFontOption> = _clockFont.asStateFlow()
+
+    private val _clockWeight = MutableStateFlow(ClockWeightOption.fromId(prefs.clockWeight))
+    val clockWeight: StateFlow<ClockWeightOption> = _clockWeight.asStateFlow()
+
+    private val _clockFontSize = MutableStateFlow(prefs.clockFontSize.coerceIn(20f, 44f))
+    val clockFontSize: StateFlow<Float> = _clockFontSize.asStateFlow()
 
     private val _currentWallpaper = MutableStateFlow(WallpaperPresets.getById(prefs.wallpaperId))
     val currentWallpaper: StateFlow<WallpaperTheme> = _currentWallpaper.asStateFlow()
@@ -1095,6 +1110,30 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun toggleCanChi(show: Boolean) {
         _showCanChi.value = show
         prefs.showCanChi = show
+    }
+
+    fun setClockStyle(style: ClockStyle) {
+        _clockStyle.value = style
+        prefs.clockStyle = style.id
+        triggerVibration()
+    }
+
+    fun setClockFont(font: ClockFontOption) {
+        _clockFont.value = font
+        prefs.clockFont = font.id
+        triggerVibration()
+    }
+
+    fun setClockWeight(weight: ClockWeightOption) {
+        _clockWeight.value = weight
+        prefs.clockWeight = weight.id
+        triggerVibration()
+    }
+
+    fun setClockFontSize(sizeSp: Float) {
+        val clamped = sizeSp.coerceIn(20f, 44f)
+        _clockFontSize.value = clamped
+        prefs.clockFontSize = clamped
     }
 
     fun toggleSwipeRightForLaunchpad(enabled: Boolean) {
