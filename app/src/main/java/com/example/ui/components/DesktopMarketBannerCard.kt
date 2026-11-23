@@ -63,8 +63,13 @@ fun DesktopMarketBannerCard(
 ) {
     val pagerScope = rememberCoroutineScope()
     val isMarketRefreshing by viewModel.isMarketPricesRefreshing.collectAsState()
+    val widgetAlpha by viewModel.widgetAlpha.collectAsState()
 
     val widgetShape = RoundedCornerShape(26.dp)
+    val glassBrush = widgetGlassBrush(widgetAlpha)
+    val borderBrush = widgetBorderBrush(widgetAlpha)
+    val glossFactor = widgetGlossAlpha(widgetAlpha)
+    val subCardAlpha = widgetSubCardAlpha(widgetAlpha)
 
     // Outer Liquid Glass Container - strictly clipped to 26.dp so background fills 100% full-bleed
     Box(
@@ -72,44 +77,32 @@ fun DesktopMarketBannerCard(
             .fillMaxWidth()
             .height(130.dp)
             .clip(widgetShape)
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.40f),
-                        Color.White.copy(alpha = 0.22f),
-                        Color.White.copy(alpha = 0.32f)
-                    )
-                )
-            )
+            .background(glassBrush)
             .border(
-                width = 1.2.dp,
-                brush = Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.90f),
-                        Color.White.copy(alpha = 0.35f),
-                        Color.White.copy(alpha = 0.70f)
-                    )
-                ),
+                width = if (widgetAlpha <= 0.02f) 0.dp else 1.2.dp,
+                brush = borderBrush,
                 shape = widgetShape
             )
             .testTag("desktop_market_banner_widget")
     ) {
         // Top Specular Gloss Highlight (3D Liquid Glass Dome Shine)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .align(Alignment.TopCenter)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.35f),
-                            Color.White.copy(alpha = 0.08f),
-                            Color.Transparent
+        if (glossFactor > 0.01f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .align(Alignment.TopCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.35f * glossFactor),
+                                Color.White.copy(alpha = 0.08f * glossFactor),
+                                Color.Transparent
+                            )
                         )
                     )
-                )
-        )
+            )
+        }
 
             Column(
                 modifier = Modifier
@@ -273,8 +266,8 @@ fun DesktopMarketBannerCard(
                                 // Column 1: Cà phê (Lâm Đồng)
                                 Surface(
                                     shape = RoundedCornerShape(14.dp),
-                                    color = Color.White.copy(alpha = 0.12f),
-                                    border = BorderStroke(
+                                    color = Color.White.copy(alpha = subCardAlpha),
+                                    border = if (widgetAlpha <= 0.02f) null else BorderStroke(
                                         width = 0.9.dp,
                                         brush = Brush.verticalGradient(
                                             listOf(
@@ -338,8 +331,8 @@ fun DesktopMarketBannerCard(
                                 // Column 2: Giá Hồ tiêu
                                 Surface(
                                     shape = RoundedCornerShape(14.dp),
-                                    color = Color.White.copy(alpha = 0.12f),
-                                    border = BorderStroke(
+                                    color = Color.White.copy(alpha = subCardAlpha),
+                                    border = if (widgetAlpha <= 0.02f) null else BorderStroke(
                                         width = 0.9.dp,
                                         brush = Brush.verticalGradient(
                                             listOf(
@@ -404,8 +397,8 @@ fun DesktopMarketBannerCard(
                                 // Column 3: Giá Vàng Nhẫn SJC (1 - 5 chỉ) - Vừa khung & Xem thêm hiển thị tất cả
                                 Surface(
                                     shape = RoundedCornerShape(14.dp),
-                                    color = Color.White.copy(alpha = 0.12f),
-                                    border = BorderStroke(
+                                    color = Color.White.copy(alpha = subCardAlpha),
+                                    border = if (widgetAlpha <= 0.02f) null else BorderStroke(
                                         width = 0.9.dp,
                                         brush = Brush.verticalGradient(
                                             listOf(
@@ -500,8 +493,8 @@ fun DesktopMarketBannerCard(
                                 gasItems.forEach { item ->
                                     Surface(
                                         shape = RoundedCornerShape(14.dp),
-                                        color = Color.White.copy(alpha = 0.12f),
-                                        border = BorderStroke(
+                                        color = Color.White.copy(alpha = subCardAlpha),
+                                        border = if (widgetAlpha <= 0.02f) null else BorderStroke(
                                             width = 0.9.dp,
                                             brush = Brush.verticalGradient(
                                                 listOf(
@@ -564,8 +557,8 @@ fun DesktopMarketBannerCard(
                                 oilItems.forEach { item ->
                                     Surface(
                                         shape = RoundedCornerShape(14.dp),
-                                        color = Color.White.copy(alpha = 0.12f),
-                                        border = BorderStroke(
+                                        color = Color.White.copy(alpha = subCardAlpha),
+                                        border = if (widgetAlpha <= 0.02f) null else BorderStroke(
                                             width = 0.9.dp,
                                             brush = Brush.verticalGradient(
                                                 listOf(

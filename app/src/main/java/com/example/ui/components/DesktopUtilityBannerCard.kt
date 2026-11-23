@@ -65,12 +65,92 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.filled.Forward10
+import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.example.model.LunarDate
 import com.example.viewmodel.LauncherMusicTrack
 import com.example.viewmodel.LauncherViewModel
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+
+internal fun widgetGlassBrush(widgetAlpha: Float): Brush {
+    val a = widgetAlpha.coerceIn(0f, 1f)
+    if (a <= 0.02f) {
+        return Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+    }
+    return if (a <= 0.50f) {
+        val ratio = a / 0.40f
+        Brush.verticalGradient(
+            listOf(
+                Color.White.copy(alpha = (0.40f * ratio).coerceIn(0f, 0.45f)),
+                Color.White.copy(alpha = (0.22f * ratio).coerceIn(0f, 0.25f)),
+                Color.White.copy(alpha = (0.32f * ratio).coerceIn(0f, 0.36f))
+            )
+        )
+    } else {
+        val t = (a - 0.50f) / 0.50f
+        val topAlpha = (0.45f + 0.42f * t).coerceIn(0f, 0.88f)
+        val midAlpha = (0.30f + 0.48f * t).coerceIn(0f, 0.80f)
+        val botAlpha = (0.38f + 0.44f * t).coerceIn(0f, 0.84f)
+        Brush.verticalGradient(
+            listOf(
+                Color(0xFF1E293B).copy(alpha = topAlpha),
+                Color(0xFF0F172A).copy(alpha = midAlpha),
+                Color(0xFF1E293B).copy(alpha = botAlpha)
+            )
+        )
+    }
+}
+
+internal fun widgetBorderBrush(widgetAlpha: Float): Brush {
+    val a = widgetAlpha.coerceIn(0f, 1f)
+    if (a <= 0.02f) {
+        return Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+    }
+    val factor = if (a <= 0.50f) (a / 0.40f).coerceIn(0f, 1f) else 0.70f + 0.30f * ((a - 0.50f) / 0.50f)
+    return Brush.verticalGradient(
+        listOf(
+            Color.White.copy(alpha = 0.85f * factor),
+            Color.White.copy(alpha = 0.32f * factor),
+            Color.White.copy(alpha = 0.65f * factor)
+        )
+    )
+}
+
+internal fun widgetGlossAlpha(widgetAlpha: Float): Float {
+    val a = widgetAlpha.coerceIn(0f, 1f)
+    if (a <= 0.02f) return 0f
+    return if (a <= 0.50f) {
+        (a / 0.40f).coerceIn(0f, 1f)
+    } else {
+        (1f - (a - 0.50f) / 0.50f * 0.65f).coerceIn(0.2f, 1f)
+    }
+}
+
+internal fun widgetSubCardAlpha(widgetAlpha: Float): Float {
+    val a = widgetAlpha.coerceIn(0f, 1f)
+    if (a <= 0.02f) return 0f
+    return if (a <= 0.50f) {
+        (0.12f * (a / 0.40f)).coerceIn(0f, 0.16f)
+    } else {
+        (0.14f + 0.10f * ((a - 0.50f) / 0.50f)).coerceIn(0.14f, 0.24f)
+    }
+}
 
 @Composable
 fun DesktopUtilityBannerCard(
@@ -96,8 +176,13 @@ fun DesktopUtilityBannerCard(
 ) {
     val context = LocalContext.current
     val pagerScope = rememberCoroutineScope()
+    val widgetAlpha by viewModel.widgetAlpha.collectAsState()
 
     val widgetShape = RoundedCornerShape(26.dp)
+    val glassBrush = widgetGlassBrush(widgetAlpha)
+    val borderBrush = widgetBorderBrush(widgetAlpha)
+    val glossFactor = widgetGlossAlpha(widgetAlpha)
+    val subCardAlpha = widgetSubCardAlpha(widgetAlpha)
 
     // Outer Liquid Glass Container - strictly clipped to 26.dp so background fills 100% full-bleed
     Box(
@@ -105,44 +190,32 @@ fun DesktopUtilityBannerCard(
             .fillMaxWidth()
             .height(130.dp)
             .clip(widgetShape)
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.40f),
-                        Color.White.copy(alpha = 0.22f),
-                        Color.White.copy(alpha = 0.32f)
-                    )
-                )
-            )
+            .background(glassBrush)
             .border(
-                width = 1.2.dp,
-                brush = Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.90f),
-                        Color.White.copy(alpha = 0.35f),
-                        Color.White.copy(alpha = 0.70f)
-                    )
-                ),
+                width = if (widgetAlpha <= 0.02f) 0.dp else 1.2.dp,
+                brush = borderBrush,
                 shape = widgetShape
             )
             .testTag("desktop_utility_banner_widget")
     ) {
         // Top Specular Gloss Highlight (3D Liquid Glass Dome Shine)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .align(Alignment.TopCenter)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.35f),
-                            Color.White.copy(alpha = 0.08f),
-                            Color.Transparent
+        if (glossFactor > 0.01f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .align(Alignment.TopCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.35f * glossFactor),
+                                Color.White.copy(alpha = 0.08f * glossFactor),
+                                Color.Transparent
+                            )
                         )
                     )
-                )
-        )
+            )
+        }
 
             Column(
                 modifier = Modifier
@@ -214,6 +287,18 @@ fun DesktopUtilityBannerCard(
                                     .clip(RoundedCornerShape(4.dp))
                                     .clickable { viewModel.openFullCalendarDialog() }
                                     .padding(horizontal = 3.dp)
+                            )
+                        } else if (leftPagerState.currentPage == 2) {
+                            Text(
+                                text = "• Mở trình phát ↗",
+                                color = Color(0xFFFDA4AF),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .clickable { viewModel.openSupportedMusicPlayer(context) }
+                                    .padding(horizontal = 3.dp)
+                                    .testTag("open_supported_music_player_header")
                             )
                         }
                     }
@@ -608,8 +693,8 @@ fun DesktopUtilityBannerCard(
 
                                 Surface(
                                     shape = RoundedCornerShape(15.dp),
-                                    color = Color.White.copy(alpha = 0.12f),
-                                    border = BorderStroke(
+                                    color = Color.White.copy(alpha = subCardAlpha),
+                                    border = if (widgetAlpha <= 0.02f) null else BorderStroke(
                                         width = 1.dp,
                                         brush = Brush.verticalGradient(
                                             listOf(
@@ -621,46 +706,52 @@ fun DesktopUtilityBannerCard(
                                     shadowElevation = 0.dp,
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .clickable { triggerScan() }
+                                        .clickable { viewModel.openSupportedMusicPlayer(context) }
+                                        .testTag("music_widget_empty_open_player")
                                 ) {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .padding(horizontal = 12.dp, vertical = 8.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Box(
                                             modifier = Modifier
-                                                .size(54.dp)
+                                                .size(50.dp)
                                                 .clip(CircleShape)
                                                 .background(
                                                     Brush.linearGradient(
                                                         listOf(Color(0xFFF43F5E), Color(0xFFBE123C))
                                                     )
-                                                ),
+                                                )
+                                                .clickable { viewModel.openSupportedMusicPlayer(context) },
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.MusicNote,
-                                                contentDescription = null,
+                                                contentDescription = "Mở trình phát nhạc hỗ trợ",
                                                 tint = Color.White,
-                                                modifier = Modifier.size(28.dp)
+                                                modifier = Modifier.size(26.dp)
                                             )
                                         }
 
                                         Column(
-                                            modifier = Modifier.weight(1f),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable { viewModel.openSupportedMusicPlayer(context) },
                                             verticalArrangement = Arrangement.Center
                                         ) {
                                             Text(
-                                                text = "Chưa có nhạc • Chạm để quét ngay",
+                                                text = "Chạm để mở trình phát nhạc",
                                                 color = Color.White,
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold
+                                                fontSize = 11.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                             Text(
-                                                text = musicScanStatus ?: "Chạm vào chữ này để quét bài hát từ máy hoặc thẻ nhớ",
+                                                text = musicScanStatus ?: "Hoặc nhấn Quét để phát nhạc trên máy",
                                                 color = Color(0xFFFDA4AF),
                                                 fontSize = 9.sp,
                                                 fontWeight = FontWeight.Medium,
@@ -686,7 +777,7 @@ fun DesktopUtilityBannerCard(
                                     }
                                 }
                             } else {
-                                // Track playing / ready: Horizontal controls
+                                // Track playing / ready: Horizontal controls with seek bar & open external player
                                 val infiniteTransition = rememberInfiniteTransition(label = "vinyl_rotate")
                                 val vinylRotation by infiniteTransition.animateFloat(
                                     initialValue = 0f,
@@ -703,7 +794,7 @@ fun DesktopUtilityBannerCard(
                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Rotating vinyl disc or album art
+                                    // Rotating vinyl disc (tap to open supported music player)
                                     Box(
                                         modifier = Modifier
                                             .size(54.dp)
@@ -714,9 +805,11 @@ fun DesktopUtilityBannerCard(
                                                 )
                                             )
                                             .border(1.5.dp, Color(0xFFF43F5E).copy(alpha = 0.6f), CircleShape)
+                                            .clickable { viewModel.openSupportedMusicPlayer(context) }
                                             .graphicsLayer {
                                                 if (isMusicPlaying) rotationZ = vinylRotation
-                                            },
+                                            }
+                                            .testTag("music_widget_disc_open_player"),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Box(
@@ -728,71 +821,157 @@ fun DesktopUtilityBannerCard(
                                         ) {
                                             Icon(
                                                 Icons.Default.MusicNote,
-                                                contentDescription = null,
+                                                contentDescription = "Mở trình phát nhạc",
                                                 tint = Color.White,
                                                 modifier = Modifier.size(10.dp)
                                             )
                                         }
                                     }
 
-                                    // Song info & media controls
+                                    // Song info & interactive seek + media controls
                                     Column(
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxHeight(),
                                         verticalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Column {
-                                            Text(
-                                                text = currentTrack.title,
-                                                color = Color.White,
-                                                fontSize = 11.5.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            Text(
-                                                text = currentTrack.artist,
-                                                color = Color.White.copy(alpha = 0.75f),
-                                                fontSize = 9.sp,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable { viewModel.openSupportedMusicPlayer(context) }
+                                                .testTag("music_widget_title_open_player"),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = currentTrack.title,
+                                                    color = Color.White,
+                                                    fontSize = 11.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = currentTrack.artist,
+                                                    color = Color.White.copy(alpha = 0.75f),
+                                                    fontSize = 9.sp,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+
+                                            Icon(
+                                                imageVector = Icons.Default.OpenInNew,
+                                                contentDescription = "Mở trình phát nhạc hỗ trợ",
+                                                tint = Color(0xFFFDA4AF),
+                                                modifier = Modifier.size(13.dp)
                                             )
                                         }
 
-                                        // Progress bar
+                                        // Interactive Seek Bar (chạm hoặc kéo để tua nhạc)
                                         val durationSec = currentTrack.totalSeconds.coerceAtLeast(1)
                                         val progressFraction = (musicProgressSeconds.toFloat() / durationSec.toFloat()).coerceIn(0f, 1f)
-                                        LinearProgressIndicator(
-                                            progress = { progressFraction },
+                                        var isSeeking by remember { mutableStateOf(false) }
+                                        var seekFraction by remember { mutableFloatStateOf(progressFraction) }
+                                        val displayFraction = if (isSeeking) seekFraction else progressFraction
+
+                                        BoxWithConstraints(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .height(3.dp)
-                                                .clip(RoundedCornerShape(2.dp)),
-                                            color = Color(0xFFF43F5E),
-                                            trackColor = Color.White.copy(alpha = 0.2f)
-                                        )
+                                                .height(14.dp)
+                                                .pointerInput(durationSec) {
+                                                    detectTapGestures { offset ->
+                                                        val fraction = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                                                        viewModel.seekMusicTo((fraction * durationSec).roundToInt())
+                                                    }
+                                                }
+                                                .pointerInput(durationSec) {
+                                                    detectHorizontalDragGestures(
+                                                        onDragStart = { offset ->
+                                                            isSeeking = true
+                                                            seekFraction = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                                                        },
+                                                        onHorizontalDrag = { change, _ ->
+                                                            change.consume()
+                                                            seekFraction = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                                                        },
+                                                        onDragEnd = {
+                                                            viewModel.seekMusicTo((seekFraction * durationSec).roundToInt())
+                                                            isSeeking = false
+                                                        },
+                                                        onDragCancel = {
+                                                            isSeeking = false
+                                                        }
+                                                    )
+                                                }
+                                                .testTag("music_seek_bar"),
+                                            contentAlignment = Alignment.CenterStart
+                                        ) {
+                                            val density = LocalDensity.current
+                                            val trackWidthPx = with(density) { maxWidth.toPx() }
+                                            val thumbSizePx = with(density) { 10.dp.toPx() }
+                                            val thumbOffsetPx = ((trackWidthPx - thumbSizePx) * displayFraction).roundToInt().coerceAtLeast(0)
 
-                                        // Controls row
+                                            // Track background
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(4.dp)
+                                                    .clip(RoundedCornerShape(2.dp))
+                                                    .background(Color.White.copy(alpha = 0.22f))
+                                            ) {
+                                                // Active progress fill
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth(displayFraction)
+                                                        .fillMaxHeight()
+                                                        .background(Color(0xFFF43F5E))
+                                                )
+                                            }
+
+                                            // Thumb dot
+                                            Box(
+                                                modifier = Modifier
+                                                    .offset { IntOffset(thumbOffsetPx, 0) }
+                                                    .size(10.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color.White)
+                                                    .border(1.5.dp, Color(0xFFF43F5E), CircleShape)
+                                            )
+                                        }
+
+                                        // Controls row: Time + (-10s, Prev, Play/Pause, Next, +10s)
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            val posMin = musicProgressSeconds / 60
-                                            val posSec = musicProgressSeconds % 60
+                                            val displayedSec = if (isSeeking) (seekFraction * durationSec).roundToInt() else musicProgressSeconds
+                                            val posMin = displayedSec / 60
+                                            val posSec = displayedSec % 60
                                             val durMin = durationSec / 60
                                             val durSec = durationSec % 60
                                             Text(
                                                 text = String.format("%02d:%02d / %02d:%02d", posMin, posSec, durMin, durSec),
-                                                color = Color.White.copy(alpha = 0.65f),
+                                                color = Color.White.copy(alpha = 0.70f),
                                                 fontSize = 8.sp
                                             )
 
                                             Row(
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(5.dp),
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
+                                                Icon(
+                                                    Icons.Default.Replay10,
+                                                    contentDescription = "Tua lại 10 giây",
+                                                    tint = Color.White.copy(alpha = 0.9f),
+                                                    modifier = Modifier
+                                                        .size(16.dp)
+                                                        .clickable { viewModel.seekMusicBy(-10) }
+                                                        .testTag("music_rewind_10s")
+                                                )
+
                                                 Icon(
                                                     Icons.Default.SkipPrevious,
                                                     contentDescription = "Bài trước",
@@ -825,6 +1004,16 @@ fun DesktopUtilityBannerCard(
                                                     modifier = Modifier
                                                         .size(18.dp)
                                                         .clickable { viewModel.nextMusicTrack() }
+                                                )
+
+                                                Icon(
+                                                    Icons.Default.Forward10,
+                                                    contentDescription = "Tua tới 10 giây",
+                                                    tint = Color.White.copy(alpha = 0.9f),
+                                                    modifier = Modifier
+                                                        .size(16.dp)
+                                                        .clickable { viewModel.seekMusicBy(10) }
+                                                        .testTag("music_forward_10s")
                                                 )
                                             }
                                         }

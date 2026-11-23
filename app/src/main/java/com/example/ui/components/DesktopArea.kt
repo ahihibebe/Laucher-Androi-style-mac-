@@ -107,6 +107,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.filled.BookmarkRemove
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -303,7 +304,8 @@ fun DesktopArea(
                         DesktopAppItem(
                             app = app,
                             onLaunch = { viewModel.launchApp(context, app) },
-                            onUnpin = { viewModel.unpinAppFromDesktop(app.packageName) }
+                            onUnpin = { viewModel.unpinAppFromDesktop(app.packageName) },
+                            onDelete = { viewModel.promptDeleteApp(app) }
                         )
                     }
                 }
@@ -399,7 +401,8 @@ fun DesktopArea(
 private fun DesktopAppItem(
     app: AppInfo,
     onLaunch: () -> Unit,
-    onUnpin: () -> Unit
+    onUnpin: () -> Unit,
+    onDelete: () -> Unit
 ) {
     val context = LocalContext.current
     var isMenuOpen by remember { mutableStateOf(false) }
@@ -600,6 +603,25 @@ private fun DesktopAppItem(
                     } catch (e: Exception) {
                         // ignore
                     }
+                }
+            )
+
+            HorizontalDivider(color = Color.DarkGray)
+
+            // Gỡ cài đặt (Xóa ứng dụng)
+            DropdownMenuItem(
+                text = { Text("Gỡ cài đặt (Xóa ứng dụng)", color = Color(0xFFFF5252), fontSize = 13.sp) },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = Color(0xFFFF5252),
+                        modifier = Modifier.size(16.dp)
+                    )
+                },
+                onClick = {
+                    isMenuOpen = false
+                    onDelete()
                 }
             )
         }

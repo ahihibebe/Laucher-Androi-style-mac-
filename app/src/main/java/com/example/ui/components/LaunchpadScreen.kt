@@ -112,48 +112,6 @@ fun LaunchpadScreen(
     val context = LocalContext.current
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val isJiggleMode by viewModel.isJiggleMode.collectAsState()
-    val appToDelete by viewModel.appToDelete.collectAsState()
-
-    // Dialog xác nhận gỡ cài đặt / xóa ứng dụng
-    if (appToDelete != null) {
-        val targetApp = appToDelete!!
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissDeleteApp() },
-            title = {
-                Text(
-                    text = "Gỡ cài đặt ứng dụng",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            },
-            text = {
-                Text(
-                    text = "Bạn có chắc chắn muốn gỡ cài đặt '" + targetApp.label + "' khỏi thiết bị?",
-                    color = Color.White.copy(alpha = 0.85f),
-                    fontSize = 13.5.sp
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = { viewModel.confirmDeleteApp(context) },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Gỡ cài đặt", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = { viewModel.dismissDeleteApp() },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Hủy", color = Color.White)
-                }
-            },
-            containerColor = Color(0xFF262626),
-            shape = RoundedCornerShape(18.dp)
-        )
-    }
 
     // Voice Search Speech Recognizer
     val speechLauncher = rememberLauncherForActivityResult(
@@ -657,10 +615,14 @@ private fun LaunchpadAppItem(
             if (isJiggleMode) {
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
+                        .offset(x = 4.dp, y = (-4).dp)
+                        .size(26.dp)
+                        .zIndex(10f)
                         .clip(CircleShape)
                         .background(Color(0xFFEF4444))
-                        .clickable { onDelete() },
+                        .border(1.5.dp, Color.White, CircleShape)
+                        .clickable { onDelete() }
+                        .testTag("launchpad_delete_badge_${app.packageName}"),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(

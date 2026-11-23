@@ -55,9 +55,10 @@ enum class SettingsCategory(val title: String) {
     CLOCK_AND_LUNAR("Đồng hồ & Lịch âm"),
     MARKET_PRICES("Giá Cà phê & Vàng"),
     DOCK("Thanh Dock (4 ứng dụng)"),
-    WALLPAPER("Hình nền"),
+    WALLPAPER("Hình nền & Widget"),
     HIDDEN_APPS("Ứng dụng đã ẩn"),
     GENERAL("Cài đặt chung"),
+    DONATE("Thông tin QR"),
     ABOUT("Giới thiệu")
 }
 
@@ -187,6 +188,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _wallpaperAlpha = MutableStateFlow(prefs.wallpaperAlpha)
     val wallpaperAlpha: StateFlow<Float> = _wallpaperAlpha.asStateFlow()
 
+    private val _widgetAlpha = MutableStateFlow(prefs.widgetAlpha)
+    val widgetAlpha: StateFlow<Float> = _widgetAlpha.asStateFlow()
+
     // Gesture preferences
     private val _swipeRightForLaunchpad = MutableStateFlow(prefs.swipeRightForLaunchpad)
     val swipeRightForLaunchpad: StateFlow<Boolean> = _swipeRightForLaunchpad.asStateFlow()
@@ -310,6 +314,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun onPackageRemoved(packageName: String) {
+        if (_appToDelete.value?.packageName == packageName) {
+            _appToDelete.value = null
+        }
         // Xóa ngay lập tức khỏi danh sách ứng dụng đã cài đặt
         _installedApps.value = _installedApps.value.filter { it.packageName != packageName }
 
@@ -360,7 +367,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             }
             val app = getApplication<Application>()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                app.registerReceiver(packageReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+                app.registerReceiver(packageReceiver, filter, Context.RECEIVER_EXPORTED)
             } else {
                 app.registerReceiver(packageReceiver, filter)
             }
@@ -528,13 +535,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    private fun playTrackAtIndex(index: Int) {
+    private fun playTrackAtIndex(index: Int, startAtSeconds: Int = 0) {
         val tracks = _musicPlaylist.value
         if (tracks.isEmpty()) return
         val clampedIndex = index.coerceIn(0, tracks.size - 1)
         _currentTrackIndex.value = clampedIndex
-        _musicProgressSeconds.value = 0
         val track = tracks[clampedIndex]
+        val safeStartSec = startAtSeconds.coerceIn(0, track.totalSeconds.coerceAtLeast(1))
+        _musicProgressSeconds.value = safeStartSec
 
         stopMediaPlayer()
 
@@ -549,6 +557,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     )
                     setDataSource(getApplication(), Uri.parse(track.audioUri))
                     prepare()
+                    if (safeStartSec > 0) {
+                        seekTo(safeStartSec * 1000)
+                    }
                     start()
                     setOnCompletionListener {
                         nextMusicTrack()
@@ -588,11 +599,114 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             }
         } else {
             if (!_isMusicPlaying.value) {
-                playTrackAtIndex(_currentTrackIndex.value)
+                playTrackAtIndex(_currentTrackIndex.value, _musicProgressSeconds.value)
             } else {
                 _isMusicPlaying.value = false
             }
         }
+    }
+
+    fun seekMusicTo(seconds: Int) {
+        val currentTrack = _musicPlaylist.value.getOrNull(_currentTrackIndex.value) ?: return
+        val totalSec = currentTrack.totalSeconds.coerceAtLeast(1)
+        val clamped = seconds.coerceIn(0, totalSec)
+        _musicProgressSeconds.value = clamped
+        val player = mediaPlayer
+        if (player != null) {
+            try {
+                player.seekTo(clamped * 1000)
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
+    }
+
+    fun seekMusicBy(deltaSeconds: Int) {
+        triggerVibration()
+        seekMusicTo(_musicProgressSeconds.value + deltaSeconds)
+    }
+
+    fun openSupportedMusicPlayer(context: Context) {
+        triggerVibration()
+        val pm = context.packageManager
+
+        // 1. Try system default Music app selector
+        try {
+            val musicIntent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_MUSIC).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            if (musicIntent.resolveActivity(pm) != null) {
+                context.startActivity(musicIntent)
+                return
+            }
+        } catch (_: Exception) {
+        }
+
+        // 2. Try well-known installed music apps
+        val knownPlayers = listOf(
+            "com.zing.mp3",
+            "ht.nct",
+            "com.spotify.music",
+            "com.google.android.apps.youtube.music",
+            "com.sec.android.app.music",
+            "com.miui.player",
+            "com.apple.android.music",
+            "com.soundcloud.android",
+            "in.krosbits.musicolet",
+            "com.maxmpz.audioplayer",
+            "org.videolan.vlc",
+            "com.google.android.music"
+        )
+        for (pkg in knownPlayers) {
+            try {
+                val launch = pm.getLaunchIntentForPackage(pkg)
+                if (launch != null) {
+                    launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(launch)
+                    return
+                }
+            } catch (_: Exception) {
+            }
+        }
+
+        // 3. Try any installed app whose name or package looks like a music player
+        val installedMatch = _installedApps.value.firstOrNull { app ->
+            !app.packageName.startsWith("action:") && (
+                app.label.contains("music", ignoreCase = true) ||
+                app.label.contains("nhạc", ignoreCase = true) ||
+                app.label.contains("mp3", ignoreCase = true) ||
+                app.label.contains("spotify", ignoreCase = true) ||
+                app.packageName.contains("music", ignoreCase = true) ||
+                app.packageName.contains("player", ignoreCase = true)
+            )
+        }
+        if (installedMatch != null) {
+            launchApp(context, installedMatch)
+            return
+        }
+
+        // 4. Fallback: open current track URI in external audio player chooser if available
+        val trackUri = _musicPlaylist.value.getOrNull(_currentTrackIndex.value)?.audioUri
+        if (trackUri != null) {
+            try {
+                val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(Uri.parse(trackUri), "audio/*")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                val chooser = Intent.createChooser(viewIntent, "Mở bằng trình phát nhạc").apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(chooser)
+                return
+            } catch (_: Exception) {
+            }
+        }
+
+        android.widget.Toast.makeText(
+            context,
+            "Không tìm thấy trình phát nhạc hỗ trợ trên máy",
+            android.widget.Toast.LENGTH_SHORT
+        ).show()
     }
 
     fun nextMusicTrack() {
@@ -824,33 +938,42 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             return
         }
 
+        val packageUri = Uri.fromParts("package", app.packageName, null)
         try {
-            val intent = Intent(Intent.ACTION_DELETE).apply {
-                data = Uri.parse("package:${app.packageName}")
-                putExtra(Intent.EXTRA_RETURN_RESULT, true)
+            val intent = Intent(Intent.ACTION_DELETE, packageUri).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            if (intent.resolveActivity(context.packageManager) != null) {
+                context.startActivity(intent)
+                return
+            }
+        } catch (_: Exception) {
+        }
+
+        try {
+            @Suppress("DEPRECATION")
+            val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE, packageUri).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            if (intent.resolveActivity(context.packageManager) != null) {
+                context.startActivity(intent)
+                return
+            }
+        } catch (_: Exception) {
+        }
+
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
-        } catch (e: Exception) {
-            try {
-                val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
-                    data = Uri.parse("package:${app.packageName}")
-                    putExtra(Intent.EXTRA_RETURN_RESULT, true)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(intent)
-            } catch (e2: Exception) {
-                try {
-                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.parse("package:${app.packageName}")
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    context.startActivity(intent)
-                } catch (e3: Exception) {
-                    // Fallback: hide if system or cannot delete
-                    hideApp(app)
-                }
-            }
+            android.widget.Toast.makeText(
+                context,
+                "Nhấn Gỡ cài đặt hoặc Tắt trong Thông tin ứng dụng",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        } catch (_: Exception) {
+            hideApp(app)
         }
     }
 
@@ -1002,9 +1125,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun setWallpaperAlpha(alpha: Float) {
-        val clamped = alpha.coerceIn(0.1f, 1.0f)
+        val clamped = alpha.coerceIn(0.0f, 1.0f)
         _wallpaperAlpha.value = clamped
         prefs.wallpaperAlpha = clamped
+    }
+
+    fun setWidgetAlpha(alpha: Float) {
+        val clamped = alpha.coerceIn(0.0f, 1.0f)
+        _widgetAlpha.value = clamped
+        prefs.widgetAlpha = clamped
     }
 
     fun setCustomWallpaperUri(uriString: String?) {

@@ -74,6 +74,11 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.loadInstalledApps()
+    }
 }
 
 @Composable
@@ -119,6 +124,7 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
     val isDesktopContextMenuOpen by viewModel.isDesktopContextMenuOpen.collectAsState()
     val dockSlotPicker by viewModel.dockSlotPicker.collectAsState()
     val isJiggleMode by viewModel.isJiggleMode.collectAsState()
+    val appToDelete by viewModel.appToDelete.collectAsState()
 
     // Photo Picker (Lưu vĩnh viễn vào bộ nhớ máy, không bị mất khi reboot)
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -141,9 +147,12 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
     BackHandler(
         enabled = isLaunchpadOpen || isSettingsOpen || isDesktopContextMenuOpen ||
                 isJiggleMode || isCoffeeOnlineDialogOpen || isFullCalendarDialogOpen ||
-                isGoldPriceDialogOpen || isBankQrZoomOpen || isAccessibilityPromptOpen || reorderTargetApp != null
+                isGoldPriceDialogOpen || isBankQrZoomOpen || isAccessibilityPromptOpen ||
+                reorderTargetApp != null || appToDelete != null
     ) {
-        if (isAccessibilityPromptOpen) {
+        if (appToDelete != null) {
+            viewModel.dismissDeleteApp()
+        } else if (isAccessibilityPromptOpen) {
             viewModel.closeAccessibilityPrompt()
         } else if (isBankQrZoomOpen) {
             viewModel.closeBankQrZoom()
@@ -403,6 +412,55 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Text("Để sau", color = Color.White)
+                    }
+                },
+                containerColor = Color(0xFF262626),
+                shape = RoundedCornerShape(18.dp)
+            )
+        }
+
+        // Dialog xác nhận gỡ cài đặt / xóa ứng dụng (dùng chung cho cả Desktop & Launchpad)
+        if (appToDelete != null) {
+            val targetApp = appToDelete!!
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissDeleteApp() },
+                title = {
+                    Text(
+                        text = if (targetApp.packageName.startsWith("action:")) "Ẩn ứng dụng" else "Gỡ cài đặt ứng dụng",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                },
+                text = {
+                    Text(
+                        text = if (targetApp.packageName.startsWith("action:")) {
+                            "Bạn có muốn ẩn '${targetApp.label}' khỏi màn hình ứng dụng?"
+                        } else {
+                            "Bạn có chắc chắn muốn gỡ cài đặt '${targetApp.label}' khỏi thiết bị?"
+                        },
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 13.5.sp
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { viewModel.confirmDeleteApp(context) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text(
+                            if (targetApp.packageName.startsWith("action:")) "Ẩn ngay" else "Gỡ cài đặt",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                dismissButton = {
+                    OutlinedButton(
+                        onClick = { viewModel.dismissDeleteApp() },
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Hủy", color = Color.White)
                     }
                 },
                 containerColor = Color(0xFF262626),
