@@ -16,11 +16,11 @@ data class GoldPrice(
 )
 
 data class PetrolPrice(
-    val fuelType: String, // ví dụ: "Xăng RON 95-III"
-    val region1Price: String, // "21.010 đ/lít"
-    val region2Price: String, // "21.430 đ/lít"
-    val region3Price: String, // "21.850 đ/lít"
-    val changeText: String = "+150 đ/lít"
+    val fuelType: String, // ví dụ: "Xăng E10 RON 95-III"
+    val region1Price: String, // "19.100 đ/lít"
+    val region2Price: String, // "19.480 đ/lít"
+    val region3Price: String = "",
+    val changeText: String = ""
 )
 
 data class MarketPriceReport(
@@ -33,5 +33,6 @@ data class MarketPriceReport(
     val goldPrices: List<GoldPrice> = emptyList(),
     val petrolPrices: List<PetrolPrice> = emptyList(),
     val oilPrices: List<PetrolPrice> = emptyList(),
+    val fuelUpdatedDate: String = "19/11/2026",
     val lastUpdated: String = "Thời gian thực"
 )

@@ -109,6 +109,7 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
     // Navigation state
     val isLaunchpadOpen by viewModel.isLaunchpadOpen.collectAsState()
     val isCoffeeOnlineDialogOpen by viewModel.isCoffeeOnlineDialogOpen.collectAsState()
+    val coffeeDialogInitialTab by viewModel.coffeeDialogInitialTab.collectAsState()
     val isFullCalendarDialogOpen by viewModel.isFullCalendarDialogOpen.collectAsState()
     val isGoldPriceDialogOpen by viewModel.isGoldPriceDialogOpen.collectAsState()
     val reorderTargetApp by viewModel.reorderTargetApp.collectAsState()
@@ -276,9 +277,10 @@ fun MacOsLauncherApp(viewModel: LauncherViewModel) {
             )
         }
 
-        // Live Coffee Online Dialog (giacaphe.com/gia-ca-phe-truc-tuyen/)
+        // Live Coffee & Pepper Online Dialog (giacaphe.com)
         if (isCoffeeOnlineDialogOpen) {
             CoffeeOnlineDialog(
+                initialTab = coffeeDialogInitialTab,
                 onDismiss = { viewModel.closeCoffeeOnlineDialog() }
             )
         }

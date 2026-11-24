@@ -365,38 +365,46 @@ fun DesktopUtilityBannerCard(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .clickable { viewModel.openFullCalendarDialog() },
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Left Column: Customizable Clock & Solar Date
-                                    ClockDisplayView(
-                                        currentTime = currentTime,
-                                        formattedDate = formattedDate,
-                                        is24Hour = is24Hour,
-                                        clockStyle = clockStyle,
-                                        clockFont = clockFont,
-                                        clockWeight = clockWeight,
-                                        clockFontSize = clockFontSize,
-                                        centered = false,
-                                        modifier = Modifier.weight(1.05f)
-                                    )
+                                    // Left Column: Đồng hồ tự động căn giữa & co giãn đều với dấu |
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                            .padding(end = 10.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        ClockDisplayView(
+                                            currentTime = currentTime,
+                                            formattedDate = formattedDate,
+                                            is24Hour = is24Hour,
+                                            clockStyle = clockStyle,
+                                            clockFont = clockFont,
+                                            clockWeight = clockWeight,
+                                            clockFontSize = clockFontSize,
+                                            centered = true,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
 
-                                    // Dấu gạch đứng ngăn cách giờ và ngày âm lịch
+                                    // Dấu gạch đứng | tự động căn đều hai bên và co giãn chiều cao theo thẻ
                                     Box(
                                         modifier = Modifier
                                             .width(1.5.dp)
-                                            .height(48.dp)
+                                            .fillMaxHeight(0.74f)
                                             .background(
-                                                Color.White.copy(alpha = 0.45f),
+                                                Color.White.copy(alpha = 0.48f),
                                                 shape = RoundedCornerShape(1.dp)
                                             )
                                     )
 
-                                    // Right Column: Lunar Date & Can Chi (không có viền bo)
+                                    // Right Column: Lunar Date & Can Chi (căn lề đều bên phải dấu |)
                                     Column(
                                         modifier = Modifier
-                                            .weight(1.25f)
-                                            .fillMaxHeight(),
+                                            .weight(1.12f)
+                                            .fillMaxHeight()
+                                            .padding(start = 10.dp),
                                         verticalArrangement = Arrangement.Center
                                     ) {
                                         Row(
@@ -407,14 +415,20 @@ fun DesktopUtilityBannerCard(
                                             Text(
                                                 text = "Âm lịch: Ngày ${lunarDate.day}/${lunarDate.month}${if (lunarDate.isLeap) " (Nhuận)" else ""}",
                                                 color = Color(0xFFFDE047),
-                                                fontSize = 12.5.sp,
-                                                fontWeight = FontWeight.Bold
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.weight(1f, fill = false)
                                             )
+                                            Spacer(modifier = Modifier.width(4.dp))
                                             Text(
                                                 text = "Xem lịch ↗",
                                                 color = Color(0xFF93C5FD),
                                                 fontSize = 9.sp,
-                                                fontWeight = FontWeight.SemiBold
+                                                fontWeight = FontWeight.SemiBold,
+                                                maxLines = 1,
+                                                softWrap = false
                                             )
                                         }
 

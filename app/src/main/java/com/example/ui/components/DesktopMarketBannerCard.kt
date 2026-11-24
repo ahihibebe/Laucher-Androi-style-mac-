@@ -126,21 +126,25 @@ fun DesktopMarketBannerCard(
                         1 -> Color(0xFFF97316)
                         else -> Color(0xFF38BDF8)
                     }
+                    val fuelDateSuffix = marketPrices.fuelUpdatedDate.takeIf { it.isNotBlank() } ?: "Hôm nay"
                     val headerTitle = when (marketPagerState.currentPage) {
                         0 -> "GIÁ THỊ TRƯỜNG • CÀ PHÊ & VÀNG"
-                        1 -> "GIÁ XĂNG DẦU • BẢNG GIÁ PETROLIMEX"
-                        else -> "GIÁ DẦU • BẢNG GIÁ PETROLIMEX"
+                        1 -> "GIÁ XĂNG • PETROLIMEX ($fuelDateSuffix)"
+                        else -> "GIÁ DẦU • PETROLIMEX ($fuelDateSuffix)"
                     }
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.clickable {
-                            pagerScope.launch {
-                                val next = (marketPagerState.currentPage + 1) % 3
-                                marketPagerState.animateScrollToPage(next)
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 6.dp)
+                            .clickable {
+                                pagerScope.launch {
+                                    val next = (marketPagerState.currentPage + 1) % 3
+                                    marketPagerState.animateScrollToPage(next)
+                                }
                             }
-                        }
                     ) {
                         Box(
                             modifier = Modifier
@@ -161,7 +165,10 @@ fun DesktopMarketBannerCard(
                             text = headerTitle,
                             color = Color.White.copy(alpha = 0.95f),
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
 
                         // Live green pulse dot
@@ -266,7 +273,7 @@ fun DesktopMarketBannerCard(
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight()
-                                        .clickable { viewModel.openCoffeeOnlineDialog() }
+                                        .clickable { viewModel.openCoffeeOnlineDialog(0) }
                                 ) {
                                     Column(
                                         modifier = Modifier
@@ -331,7 +338,7 @@ fun DesktopMarketBannerCard(
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight()
-                                        .clickable { viewModel.openCoffeeOnlineDialog() }
+                                        .clickable { viewModel.openCoffeeOnlineDialog(1) }
                                 ) {
                                     Column(
                                         modifier = Modifier
@@ -462,7 +469,7 @@ fun DesktopMarketBannerCard(
                             }
                         }
                         1 -> {
-                            // Page 1: Giá Xăng (RON 95-III, E5 RON 92-II, RON 95-V arranged horizontally)
+                            // Page 1: Giá Xăng (cập nhật trực tiếp từ Petrolimex theo ngày hiện tại)
                             Row(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -470,11 +477,22 @@ fun DesktopMarketBannerCard(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                val gasItems = listOf(
-                                    Triple("RON 95-III", "19.820 đ", "Vùng 2: 20.210 đ"),
-                                    Triple("E5 RON 92-II", "19.340 đ", "Vùng 2: 19.720 đ"),
-                                    Triple("RON 95-V", "20.650 đ", "Vùng 2: 21.060 đ")
-                                )
+                                val gasItems = if (marketPrices.petrolPrices.isNotEmpty()) {
+                                    marketPrices.petrolPrices.take(3).map { fuel ->
+                                        val shortLabel = fuel.fuelType
+                                            .replace(Regex("""^Xăng\s+""", RegexOption.IGNORE_CASE), "")
+                                            .trim()
+                                        val r1 = fuel.region1Price.replace(" đ/lít", " đ").trim()
+                                        val r2 = fuel.region2Price.replace(" đ/lít", " đ").trim()
+                                        Triple(shortLabel, r1, "Vùng 2: $r2")
+                                    }
+                                } else {
+                                    listOf(
+                                        Triple("E10 RON 95-III", "19.100 đ", "Vùng 2: 19.480 đ"),
+                                        Triple("E5 RON 92-II", "18.570 đ", "Vùng 2: 18.940 đ"),
+                                        Triple("E10 RON 95-V", "21.100 đ", "Vùng 2: 21.520 đ")
+                                    )
+                                }
 
                                 gasItems.forEach { item ->
                                     Surface(
@@ -505,20 +523,23 @@ fun DesktopMarketBannerCard(
                                                 color = Color(0xFFFED7AA),
                                                 fontSize = 8.5.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                maxLines = 1
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                             Text(
                                                 text = item.second,
                                                 color = Color(0xFFF97316),
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                maxLines = 1
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                             Text(
                                                 text = item.third,
                                                 color = Color.White.copy(alpha = 0.70f),
                                                 fontSize = 7.5.sp,
-                                                maxLines = 1
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                         }
                                     }
@@ -526,7 +547,7 @@ fun DesktopMarketBannerCard(
                             }
                         }
                         2 -> {
-                            // Page 2: Giá Dầu (Dầu DO 0.05S-II, Dầu Hỏa, Dầu Mazut arranged horizontally)
+                            // Page 2: Giá Dầu (cập nhật trực tiếp từ Petrolimex theo ngày hiện tại)
                             Row(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -534,11 +555,28 @@ fun DesktopMarketBannerCard(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                val oilItems = listOf(
-                                    Triple("Dầu DO 0.05S", "18.460 đ", "Vùng 2: 18.820 đ"),
-                                    Triple("Dầu Hỏa", "18.820 đ", "Vùng 2: 19.190 đ"),
-                                    Triple("Dầu Mazut", "16.020 đ", "Vùng 2: 16.340 đ")
-                                )
+                                val oilItems = if (marketPrices.oilPrices.isNotEmpty()) {
+                                    marketPrices.oilPrices.take(3).map { fuel ->
+                                        val shortLabel = fuel.fuelType
+                                            .replace(Regex("""\s*\([^)]*\)"""), "")
+                                            .trim()
+                                        val r1 = fuel.region1Price
+                                            .replace(" đ/lít", " đ")
+                                            .replace(" đ/kg", " đ/kg")
+                                            .trim()
+                                        val r2 = fuel.region2Price
+                                            .replace(" đ/lít", " đ")
+                                            .replace(" đ/kg", " đ/kg")
+                                            .trim()
+                                        Triple(shortLabel, r1, "Vùng 2: $r2")
+                                    }
+                                } else {
+                                    listOf(
+                                        Triple("Dầu DO 0.05S-II", "26.340 đ", "Vùng 2: 26.860 đ"),
+                                        Triple("Dầu Hỏa 2-K", "25.850 đ", "Vùng 2: 26.360 đ"),
+                                        Triple("Dầu DO 0.001S-V", "28.140 đ", "Vùng 2: 28.700 đ")
+                                    )
+                                }
 
                                 oilItems.forEach { item ->
                                     Surface(
@@ -569,20 +607,23 @@ fun DesktopMarketBannerCard(
                                                 color = Color(0xFFBAE6FD),
                                                 fontSize = 8.5.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                maxLines = 1
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                             Text(
                                                 text = item.second,
                                                 color = Color(0xFF38BDF8),
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                maxLines = 1
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                             Text(
                                                 text = item.third,
                                                 color = Color.White.copy(alpha = 0.70f),
                                                 fontSize = 7.5.sp,
-                                                maxLines = 1
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                         }
                                     }

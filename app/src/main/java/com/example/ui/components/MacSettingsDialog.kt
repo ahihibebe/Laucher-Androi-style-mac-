@@ -1015,28 +1015,33 @@ private fun MarketPricesSettingsPane(
                     }
                 }
 
+                val fuelDate = marketPrices?.fuelUpdatedDate?.takeIf { it.isNotBlank() } ?: "Hôm nay"
                 HorizontalDivider(color = Color(0xFF3A4D3B))
-                Text("⛽ GIÁ XĂNG (VÙNG 1, VÙNG 2, VÙNG 3)", color = Color(0xFF93C5FD), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("⛽ GIÁ XĂNG PETROLIMEX ($fuelDate)", color = Color(0xFF93C5FD), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 marketPrices?.petrolPrices?.forEach { fuel ->
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Text(fuel.fuelType, color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Vùng 1: ${fuel.region1Price}", color = Color(0xFF93C5FD), fontSize = 10.5.sp)
                             Text("Vùng 2: ${fuel.region2Price}", color = Color(0xFFFDE047), fontSize = 10.5.sp)
-                            Text("Vùng 3: ${fuel.region3Price}", color = Color(0xFFFCA5A5), fontSize = 10.5.sp)
+                            if (fuel.region3Price.isNotBlank()) {
+                                Text("Vùng 3: ${fuel.region3Price}", color = Color(0xFFFCA5A5), fontSize = 10.5.sp)
+                            }
                         }
                     }
                 }
 
                 HorizontalDivider(color = Color(0xFF3A4D3B))
-                Text("🛢️ GIÁ DẦU (VÙNG 1, VÙNG 2, VÙNG 3)", color = Color(0xFF38BDF8), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("🛢️ GIÁ DẦU PETROLIMEX ($fuelDate)", color = Color(0xFF38BDF8), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 marketPrices?.oilPrices?.forEach { fuel ->
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Text(fuel.fuelType, color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Vùng 1: ${fuel.region1Price}", color = Color(0xFF93C5FD), fontSize = 10.5.sp)
                             Text("Vùng 2: ${fuel.region2Price}", color = Color(0xFFFDE047), fontSize = 10.5.sp)
-                            Text("Vùng 3: ${fuel.region3Price}", color = Color(0xFFFCA5A5), fontSize = 10.5.sp)
+                            if (fuel.region3Price.isNotBlank()) {
+                                Text("Vùng 3: ${fuel.region3Price}", color = Color(0xFFFCA5A5), fontSize = 10.5.sp)
+                            }
                         }
                     }
                 }

@@ -73,6 +73,7 @@ private const val PEPPER_ONLINE_URL = "https://giacaphe.com/gia-tieu-noi-dia/"
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun CoffeeOnlineDialog(
+    initialTab: Int = 0,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -80,7 +81,7 @@ fun CoffeeOnlineDialog(
     var isLoading by remember { mutableStateOf(true) }
     var hasCrashed by remember { mutableStateOf(false) }
     var reloadTrigger by remember { mutableIntStateOf(0) }
-    var selectedTab by remember { mutableIntStateOf(0) } // 0 = Cà phê, 1 = Giá tiêu
+    var selectedTab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 1)) } // 0 = Cà phê, 1 = Giá tiêu
 
     val currentUrl = if (selectedTab == 0) COFFEE_ONLINE_URL else PEPPER_ONLINE_URL
 
@@ -198,7 +199,6 @@ fun CoffeeOnlineDialog(
                                         selectedTab = 0
                                         hasCrashed = false
                                         isLoading = true
-                                        webViewInstance?.loadUrl(COFFEE_ONLINE_URL)
                                     }
                                 }
                         ) {
@@ -221,7 +221,6 @@ fun CoffeeOnlineDialog(
                                         selectedTab = 1
                                         hasCrashed = false
                                         isLoading = true
-                                        webViewInstance?.loadUrl(PEPPER_ONLINE_URL)
                                     }
                                 }
                         ) {

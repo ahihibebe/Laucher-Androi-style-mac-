@@ -22,7 +22,9 @@ class MarketPriceRepository {
         .build()
 
     suspend fun getLatestMarketPrices(): MarketPriceReport = withContext(Dispatchers.IO) {
-        val now = SimpleDateFormat("HH:mm - dd/MM/yyyy", Locale("vi", "VN")).format(Date())
+        val viLocale = Locale.forLanguageTag("vi-VN")
+        val now = SimpleDateFormat("HH:mm - dd/MM/yyyy", viLocale).format(Date())
+        val todayDate = SimpleDateFormat("dd/MM/yyyy", viLocale).format(Date())
 
         var lamDongPrice = "88.500 đ/kg"
         var dakLakPrice = "89.300 đ/kg"
@@ -175,18 +177,11 @@ class MarketPriceRepository {
             GoldPrice("Nữ trang Vàng 10K (41.7%)", "Nữ trang", "52.400.000 đ", "57.800.000 đ", "+150.000 đ/lượng")
         )
 
-        val petrolList = listOf(
-            PetrolPrice("Xăng RON 95-V", "21.490 đ/lít", "21.910 đ/lít", "22.340 đ/lít", "+210 đ/lít"),
-            PetrolPrice("Xăng RON 95-III", "21.010 đ/lít", "21.430 đ/lít", "21.850 đ/lít", "+180 đ/lít"),
-            PetrolPrice("Xăng E5 RON 92-II", "19.980 đ/lít", "20.370 đ/lít", "20.770 đ/lít", "+150 đ/lít")
-        )
-
-        val oilList = listOf(
-            PetrolPrice("Dầu DO 0.001S-V", "19.380 đ/lít", "19.760 đ/lít", "20.150 đ/lít", "+120 đ/lít"),
-            PetrolPrice("Dầu DO 0.05S-II (Điêzen)", "18.980 đ/lít", "19.350 đ/lít", "19.730 đ/lít", "+110 đ/lít"),
-            PetrolPrice("Dầu Hỏa 2-KO", "19.120 đ/lít", "19.500 đ/lít", "19.880 đ/lít", "+120 đ/lít"),
-            PetrolPrice("Dầu Mazút 180CST 3.5S", "15.820 đ/kg", "16.130 đ/kg", "16.450 đ/kg", "+90 đ/kg")
-        )
+        // 3.5 Fetch giá xăng dầu Petrolimex mới nhất theo ngày hiện tại
+        val fuelResult = fetchPetrolimexPrices(headers, todayDate)
+        val petrolList = fuelResult.petrolPrices
+        val oilList = fuelResult.oilPrices
+        val fuelUpdatedDate = fuelResult.updatedDate
 
         // 4. Fetch giá hồ tiêu từ https://giacaphe.com/gia-tieu-noi-dia/ và https://giacaphe.com/gia-tieu-hom-nay/
         val pepperUrls = listOf("https://giacaphe.com/gia-tieu-noi-dia/", "https://giacaphe.com/gia-tieu-hom-nay/")
@@ -266,7 +261,147 @@ class MarketPriceRepository {
             goldPrices = fullGoldList,
             petrolPrices = petrolList,
             oilPrices = oilList,
+            fuelUpdatedDate = fuelUpdatedDate,
             lastUpdated = lastUpdatedTime
+        )
+    }
+
+    private data class FuelFetchResult(
+        val petrolPrices: List<PetrolPrice>,
+        val oilPrices: List<PetrolPrice>,
+        val updatedDate: String
+    )
+
+    private fun fetchPetrolimexPrices(
+        headers: Map<String, String>,
+        todayDate: String
+    ): FuelFetchResult {
+        val defaultRon95V = PetrolPrice("Xăng E10 RON 95-V", "21.100 đ/lít", "21.520 đ/lít")
+        val defaultRon95III = PetrolPrice("Xăng E10 RON 95-III", "19.100 đ/lít", "19.480 đ/lít")
+        val defaultE5Ron92 = PetrolPrice("Xăng E5 RON 92-II", "18.570 đ/lít", "18.940 đ/lít")
+        val defaultDo005 = PetrolPrice("Dầu DO 0.05S-II", "26.340 đ/lít", "26.860 đ/lít")
+        val defaultKerosene = PetrolPrice("Dầu Hỏa 2-K", "25.850 đ/lít", "26.360 đ/lít")
+        val defaultDo001 = PetrolPrice("Dầu DO 0.001S-V", "28.140 đ/lít", "28.700 đ/lít")
+        val defaultMazut = PetrolPrice("Dầu Mazút 180CST 3.5S", "18.670 đ/kg", "19.040 đ/kg")
+
+        val fuelUrls = listOf(
+            "https://webgia.com/gia-xang-dau/petrolimex/",
+            "https://giacaphe.com/gia-xang-dau/",
+            "https://www.pvoil.com.vn/truyen-thong/tin-gia-xang-dau"
+        )
+
+        val rowRegex = Regex("""<tr\b[^>]*>(.*?)</tr>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+        val cellRegex = Regex("""<t[dh]\b[^>]*>(.*?)</t[dh]>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+        val tagRegex = Regex("""<[^>]+>""")
+        val priceRegex = Regex("""\b([1-9][0-9][.,][0-9]{3})\b""")
+        val dateRegex = Regex(
+            """(?:áp\s*dụng\s*từ|kỳ\s*điều\s*hành|cập\s*nhật(?:\s*lúc|\s*ngày)?|từ\s*\d{1,2}h\d{0,2}\s*ngày|ngày)\s*(?:\d{1,2}[h:]\d{2}\s*(?:ngày\s*)?)?(\d{1,2}/\d{1,2}/20\d{2})""",
+            RegexOption.IGNORE_CASE
+        )
+
+        for (url in fuelUrls) {
+            try {
+                val reqBuilder = Request.Builder().url(url)
+                headers.forEach { (k, v) -> reqBuilder.header(k, v) }
+                client.newCall(reqBuilder.build()).execute().use { res ->
+                    if (!res.isSuccessful) return@use
+                    val html = res.body?.string().orEmpty()
+                    if (html.isBlank()) return@use
+
+                    var ron95V: PetrolPrice? = null
+                    var ron95III: PetrolPrice? = null
+                    var e5Ron92: PetrolPrice? = null
+                    var do001: PetrolPrice? = null
+                    var do005: PetrolPrice? = null
+                    var kerosene: PetrolPrice? = null
+                    var mazut: PetrolPrice? = null
+
+                    rowRegex.findAll(html).forEach { rowMatch ->
+                        val cells = cellRegex.findAll(rowMatch.groupValues[1])
+                            .map { cellMatch ->
+                                tagRegex.replace(cellMatch.groupValues[1], " ")
+                                    .replace("&nbsp;", " ")
+                                    .replace("&amp;", "&")
+                                    .replace(Regex("""\s+"""), " ")
+                                    .trim()
+                            }
+                            .filter { it.isNotEmpty() }
+                            .toList()
+
+                        if (cells.size < 2) return@forEach
+                        val nameCell = cells[0]
+                        val priceValues = cells.drop(1).mapNotNull { cellText ->
+                            val trimmed = cellText.trim()
+                            if (trimmed.startsWith("+") || trimmed.startsWith("-")) {
+                                null
+                            } else {
+                                priceRegex.find(trimmed)?.groupValues?.get(1)?.replace(",", ".")
+                            }
+                        }
+                        if (priceValues.isEmpty()) return@forEach
+
+                        val r1 = priceValues[0]
+                        val r2 = priceValues.getOrNull(1) ?: priceValues[0]
+
+                        when {
+                            ron95V == null && Regex("""ron\s*95[-\s]*v\b""", RegexOption.IGNORE_CASE).containsMatchIn(nameCell) -> {
+                                ron95V = PetrolPrice(nameCell, "$r1 đ/lít", "$r2 đ/lít")
+                            }
+                            ron95III == null && Regex("""ron\s*95[-\s]*iii\b""", RegexOption.IGNORE_CASE).containsMatchIn(nameCell) -> {
+                                ron95III = PetrolPrice(nameCell, "$r1 đ/lít", "$r2 đ/lít")
+                            }
+                            e5Ron92 == null && Regex("""e5\s*ron\s*92""", RegexOption.IGNORE_CASE).containsMatchIn(nameCell) -> {
+                                e5Ron92 = PetrolPrice(nameCell, "$r1 đ/lít", "$r2 đ/lít")
+                            }
+                            do001 == null && Regex("""0[.,]001\s*s""", RegexOption.IGNORE_CASE).containsMatchIn(nameCell) -> {
+                                do001 = PetrolPrice(nameCell, "$r1 đ/lít", "$r2 đ/lít")
+                            }
+                            do005 == null && Regex("""0[.,]05\s*s""", RegexOption.IGNORE_CASE).containsMatchIn(nameCell) -> {
+                                do005 = PetrolPrice(nameCell, "$r1 đ/lít", "$r2 đ/lít")
+                            }
+                            kerosene == null && Regex("""d[ầa]u\s*h[ỏo]a""", RegexOption.IGNORE_CASE).containsMatchIn(nameCell) -> {
+                                kerosene = PetrolPrice(nameCell, "$r1 đ/lít", "$r2 đ/lít")
+                            }
+                            mazut == null && Regex("""maz[uú]t|180\s*cst""", RegexOption.IGNORE_CASE).containsMatchIn(nameCell) -> {
+                                mazut = PetrolPrice(nameCell, "$r1 đ/kg", "$r2 đ/kg")
+                            }
+                        }
+                    }
+
+                    val parsedPetrolCount = listOfNotNull(ron95V, ron95III, e5Ron92).size
+                    val parsedOilCount = listOfNotNull(do001, do005, kerosene, mazut).size
+                    if (parsedPetrolCount >= 2 || parsedOilCount >= 2) {
+                        val plainPageText = tagRegex.replace(html, " ")
+                            .replace("&nbsp;", " ")
+                            .replace(Regex("""\s+"""), " ")
+                        val parsedDate = dateRegex.find(plainPageText)?.groupValues?.get(1)?.trim()
+                            ?.takeIf { it.isNotBlank() } ?: todayDate
+
+                        return FuelFetchResult(
+                            petrolPrices = listOf(
+                                ron95III ?: defaultRon95III,
+                                e5Ron92 ?: defaultE5Ron92,
+                                ron95V ?: defaultRon95V
+                            ),
+                            oilPrices = listOf(
+                                do005 ?: defaultDo005,
+                                kerosene ?: defaultKerosene,
+                                do001 ?: defaultDo001,
+                                mazut ?: defaultMazut
+                            ),
+                            updatedDate = parsedDate
+                        )
+                    }
+                }
+            } catch (_: Exception) {
+                // Thử nguồn tiếp theo nếu nguồn hiện tại lỗi
+            }
+        }
+
+        return FuelFetchResult(
+            petrolPrices = listOf(defaultRon95III, defaultE5Ron92, defaultRon95V),
+            oilPrices = listOf(defaultDo005, defaultKerosene, defaultDo001, defaultMazut),
+            updatedDate = todayDate
         )
     }
 }

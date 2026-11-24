@@ -248,6 +248,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _isCoffeeOnlineDialogOpen = MutableStateFlow(false)
     val isCoffeeOnlineDialogOpen: StateFlow<Boolean> = _isCoffeeOnlineDialogOpen.asStateFlow()
 
+    private val _coffeeDialogInitialTab = MutableStateFlow(0)
+    val coffeeDialogInitialTab: StateFlow<Int> = _coffeeDialogInitialTab.asStateFlow()
+
     private val _isFullCalendarDialogOpen = MutableStateFlow(false)
     val isFullCalendarDialogOpen: StateFlow<Boolean> = _isFullCalendarDialogOpen.asStateFlow()
 
@@ -452,7 +455,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun openCoffeeOnlineDialog() {
+    fun openCoffeeOnlineDialog(initialTab: Int = 0) {
+        _coffeeDialogInitialTab.value = initialTab.coerceIn(0, 1)
         _isCoffeeOnlineDialogOpen.value = true
     }
 
